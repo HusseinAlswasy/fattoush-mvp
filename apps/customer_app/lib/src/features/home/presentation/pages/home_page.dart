@@ -1,13 +1,14 @@
-import 'package:customer_app/src/core/layout/app_responsive.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_bottom_nav.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/cart/presentation/pages/cart_page.dart';
+import 'package:customer_app/src/features/home/data/models/ad_banner.dart';
 import 'package:customer_app/src/features/home/data/models/home_data.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:customer_app/src/features/home/data/services/home_api_service.dart';
 import 'package:customer_app/src/features/home/presentation/pages/categories_page.dart';
 import 'package:customer_app/src/features/home/presentation/pages/product_details_page.dart';
+import 'package:customer_app/src/features/home/presentation/pages/search_page.dart';
 import 'package:customer_app/src/features/home/presentation/widgets/error_state_widget.dart';
 import 'package:customer_app/src/features/home/presentation/widgets/product_card.dart';
 import 'package:customer_app/src/features/home/presentation/widgets/promo_card.dart';
@@ -24,13 +25,26 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final HomeApiService _homeApiService = HomeApiService();
+  final TextEditingController _inlineSearchController = TextEditingController();
   late Future<HomeData> _homeFuture;
   String? _selectedCategory;
+  String _inlineQuery = '';
 
   @override
   void initState() {
     super.initState();
     _homeFuture = _homeApiService.fetchHomeData();
+    _inlineSearchController.addListener(() {
+      setState(() {
+        _inlineQuery = _inlineSearchController.text.trim();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _inlineSearchController.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -47,20 +61,97 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _openCart(BuildContext context) {
-    Navigator.of(context).pushNamed(CartPage.routeName);
+  List<_CategoryItem> _buildCategories(List<Product> products) {
+    final categoryNames = products
+        .map((product) => product.category?.trim())
+        .whereType<String>()
+        .where((category) => category.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+
+    return categoryNames
+        .map(
+          (category) => _CategoryItem(
+            label: category,
+            icon: _categoryEmoji(category),
+          ),
+        )
+        .toList(growable: false);
   }
 
-  void _openCategories(BuildContext context) {
-    Navigator.of(context).pushNamed(CategoriesPage.routeName);
+  List<Product> _filterProducts(List<Product> products) {
+    return products.where((product) {
+      final matchesCategory = _selectedCategory == null
+          ? true
+          : (product.category ?? '').trim() == _selectedCategory;
+      final matchesQuery = _inlineQuery.isEmpty
+          ? true
+          : [
+              product.name,
+              product.description ?? '',
+              product.category ?? '',
+            ].join(' ').toLowerCase().contains(_inlineQuery.toLowerCase());
+      return matchesCategory && matchesQuery;
+    }).toList(growable: false);
+  }
+
+  List<AdBannerModel> _buildShowcase(HomeData data) {
+    final productShowcase = data.products
+        .where((product) => (product.imageUrl ?? '').isNotEmpty)
+        .toList(growable: false)
+        .reversed
+        .take(5)
+        .map(
+          (product) => AdBannerModel(
+            id: 'product-${product.id}',
+            title: product.name,
+            imageUrl: product.imageUrl ?? '',
+          ),
+        )
+        .toList(growable: false);
+
+    if (productShowcase.isNotEmpty) {
+      return productShowcase;
+    }
+
+    return data.ads;
+  }
+
+  String _categoryEmoji(String category) {
+    switch (category) {
+      case 'البقالة':
+        return '🛒';
+      case 'المخبوزات':
+        return '🥖';
+      case 'الألبان':
+        return '🥛';
+      case 'الخضار':
+        return '🥬';
+      case 'الفواكه':
+        return '🍎';
+      case 'اللحوم':
+        return '🥩';
+      case 'الفراخ':
+        return '🍗';
+      case 'المجمدات':
+        return '🧊';
+      case 'المشروبات':
+        return '🥤';
+      case 'الحلويات':
+        return '🧁';
+      case 'المنظفات':
+        return '🧴';
+      case 'العناية الشخصية':
+        return '🧼';
+      default:
+        return '🛍️';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final cart = AppScope.cartOf(context);
-    final isSmallPhone = context.isSmallPhone;
-    final categoryColumns = isSmallPhone ? 3 : 4;
-    final productCardWidth = isSmallPhone ? 160.0 : 180.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
@@ -77,160 +168,159 @@ class _HomePageState extends State<HomePage> {
 
             if (snapshot.hasError) {
               return ErrorStateWidget(
-                message: 'تعذر تحميل البيانات من السيرفر.\n${snapshot.error}',
+                message: 'تعذر تحميل البيانات من السيرفر.',
                 onRetry: _refresh,
               );
             }
 
             final data = snapshot.data!;
             final categories = _buildCategories(data.products);
-            final visibleProducts = _selectedCategory == null
-                ? data.products
-                : data.products
-                    .where((product) => product.category == _selectedCategory)
-                    .toList();
+            final visibleProducts = _filterProducts(data.products);
+            final showcase = _buildShowcase(data);
 
             return RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
                 children: [
-                  _HomeHeader(onCartTap: () => _openCart(context)),
-                  SizedBox(height: isSmallPhone ? 14 : 18),
+                  _HomeHeader(
+                    onSearchTap: () => Navigator.of(context).pushNamed(
+                      SearchPage.routeName,
+                    ),
+                    onCartTap: () => Navigator.of(context).pushNamed(
+                      CartPage.routeName,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   SizedBox(
-                    height: isSmallPhone ? 146 : 158,
-                    child: data.ads.isEmpty
+                    height: 170,
+                    child: showcase.isEmpty
                         ? const PromoCard.fallback()
                         : PageView.builder(
-                            itemCount: data.ads.length,
-                            controller: PageController(viewportFraction: 0.96),
+                            itemCount: showcase.length,
+                            controller: PageController(viewportFraction: 0.95),
                             itemBuilder: (context, index) {
                               return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: PromoCard(ad: data.ads[index]),
+                                padding: const EdgeInsets.only(right: 10),
+                                child: PromoCard(ad: showcase[index]),
                               );
                             },
                           ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      data.ads.isEmpty ? 4 : data.ads.length.clamp(1, 4),
-                      (index) => Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: index == 0
-                              ? const Color(0xFFFF8B6A)
-                              : Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFE6E8EF)),
-                        ),
+                  const SizedBox(height: 18),
+                  TextField(
+                    controller: _inlineSearchController,
+                    decoration: InputDecoration(
+                      hintText: 'ابحث في الصفحة عن أي منتج',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
-                  SizedBox(height: isSmallPhone ? 14 : 18),
-                  const _SearchBox(),
-                  SizedBox(height: isSmallPhone ? 14 : 18),
-                  GridView.builder(
-                    itemCount: categories.length,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: categoryColumns,
-                      mainAxisSpacing: isSmallPhone ? 12 : 14,
-                      crossAxisSpacing: isSmallPhone ? 12 : 14,
-                      childAspectRatio: isSmallPhone ? 0.86 : 0.82,
-                    ),
-                    itemBuilder: (context, index) {
-                      final item = categories[index];
-                      return _CategoryCard(
-                        item: item,
-                        selected: item.label == _selectedCategory,
-                        onTap: () {
-                          setState(() {
-                            if (item.label == 'الكل') {
+                  const SizedBox(height: 18),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _CategoryChip(
+                          label: 'الكل',
+                          icon: '🛒',
+                          selected: _selectedCategory == null,
+                          onTap: () {
+                            setState(() {
                               _selectedCategory = null;
-                            } else {
-                              _selectedCategory = item.label;
-                            }
-                          });
-                        },
-                      );
-                    },
+                            });
+                          },
+                        ),
+                        ...categories.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: _CategoryChip(
+                              label: item.label,
+                              icon: item.icon,
+                              selected: item.label == _selectedCategory,
+                              onTap: () {
+                                setState(() {
+                                  _selectedCategory = item.label;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: isSmallPhone ? 18 : 22),
+                  const SizedBox(height: 22),
                   Row(
                     children: [
                       Text(
-                        _selectedCategory == null
-                            ? 'Popular'
-                            : '$_selectedCategory',
-                        style: TextStyle(
-                          fontSize: isSmallPhone ? 24 : 28,
+                        _selectedCategory ?? 'All Products',
+                        style: const TextStyle(
+                          fontSize: 24,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF3A3D4D),
+                          color: Color(0xFF3A3D4D),
                         ),
                       ),
                       const Spacer(),
                       TextButton(
-                        onPressed: () => _openCategories(context),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('All'),
-                            SizedBox(width: 4),
-                            Icon(Icons.arrow_forward_rounded, size: 18),
-                          ],
+                        onPressed: () => Navigator.of(context).pushNamed(
+                          CategoriesPage.routeName,
                         ),
+                        child: const Text('All Categories'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   if (visibleProducts.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 26),
+                      padding: EdgeInsets.symmetric(vertical: 60),
                       child: Text(
-                        'No products found in this category yet.',
+                        'المنتج غير موجود',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF98A0B4)),
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF4A4E61),
+                        ),
                       ),
                     )
                   else
-                    SizedBox(
-                      height: isSmallPhone ? 248 : 262,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: visibleProducts.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 14),
-                        itemBuilder: (context, index) {
-                          final product = visibleProducts[index];
-                          return SizedBox(
-                            width: productCardWidth,
-                            child: ProductCard(
-                              product: product,
-                              onTap: () => _openProductDetails(context, product),
-                              onAddToCart: () {
-                                cart.add(product);
-                                context.showAppNotice(
-                                  title: 'Added to cart',
-                                  message:
-                                      '${product.name} is ready in your order.',
-                                  type: AppNoticeType.success,
-                                  actionLabel: 'Open cart',
-                                  onAction: () {
-                                    Navigator.of(context).pushNamed(
-                                      CartPage.routeName,
-                                    );
-                                  },
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: visibleProducts.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.72,
+                      ),
+                      itemBuilder: (context, index) {
+                        final product = visibleProducts[index];
+                        return ProductCard(
+                          product: product,
+                          onTap: () => _openProductDetails(context, product),
+                          onAddToCart: () {
+                            cart.add(product);
+                            context.showAppNotice(
+                              title: 'Added to cart',
+                              message: '${product.name} added successfully.',
+                              type: AppNoticeType.success,
+                              actionLabel: 'Open cart',
+                              onAction: () {
+                                Navigator.of(context).pushNamed(
+                                  CartPage.routeName,
                                 );
                               },
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        );
+                      },
                     ),
                 ],
               ),
@@ -240,189 +330,109 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  List<_CategoryItem> _buildCategories(List<Product> products) {
-    final categoryNames = products
-        .map((product) => product.category?.trim())
-        .whereType<String>()
-        .where((category) => category.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-
-    return [
-      const _CategoryItem(label: 'الكل', icon: '🛒'),
-      ...categoryNames.map(
-        (category) => _CategoryItem(
-          label: category,
-          icon: _categoryEmoji(category),
-        ),
-      ),
-    ];
-  }
-
-  String _categoryEmoji(String category) {
-    switch (category) {
-      case 'بيتزا':
-        return '🍕';
-      case 'كشري':
-        return '🍲';
-      case 'فراخ':
-        return '🍗';
-      case 'حلويات':
-        return '🧁';
-      case 'المخبوزات':
-        return '🥖';
-      case 'البقالة':
-        return '🛍️';
-      default:
-        return '🍽️';
-    }
-  }
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader({required this.onCartTap});
+  const _HomeHeader({
+    required this.onSearchTap,
+    required this.onCartTap,
+  });
 
+  final VoidCallback onSearchTap;
   final VoidCallback onCartTap;
 
   @override
   Widget build(BuildContext context) {
-    final isSmallPhone = context.isSmallPhone;
-
     return Row(
       children: [
-        Expanded(
+        const Expanded(
           child: Text(
-            'Foodster',
+            'Fattoush',
             style: TextStyle(
-              fontSize: isSmallPhone ? 24 : 28,
+              fontSize: 28,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF5C6697),
+              color: Color(0xFF5C6697),
             ),
           ),
         ),
-        const Icon(
-          Icons.location_on_rounded,
-          color: Color(0xFFFF8666),
-          size: 20,
+        _HeaderIconButton(
+          icon: Icons.search_rounded,
+          onTap: onSearchTap,
         ),
-        const SizedBox(width: 4),
-        const Text(
-          'القاهرة',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF585D72),
-          ),
-        ),
-        SizedBox(width: isSmallPhone ? 6 : 10),
-        GestureDetector(
+        const SizedBox(width: 10),
+        _HeaderIconButton(
+          icon: Icons.shopping_bag_outlined,
           onTap: onCartTap,
-          child: Container(
-            width: isSmallPhone ? 34 : 38,
-            height: isSmallPhone ? 34 : 38,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.search_rounded,
-              color: Color(0xFF8890A8),
-            ),
-          ),
         ),
       ],
     );
   }
 }
 
-class _SearchBox extends StatelessWidget {
-  const _SearchBox();
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isSmallPhone = context.isSmallPhone;
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: isSmallPhone ? 14 : 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: const Row(
-        children: [
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'ابحث عن وجبة أو مطعم',
-                border: InputBorder.none,
-              ),
-            ),
-          ),
-          Icon(Icons.search_rounded, color: Color(0xFFB2B7C8)),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(icon, color: const Color(0xFF8890A8)),
       ),
     );
   }
 }
 
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({
-    required this.item,
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.icon,
     required this.selected,
     required this.onTap,
   });
 
-  final _CategoryItem item;
+  final String label;
+  final String icon;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isSmallPhone = context.isSmallPhone;
-
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Column(
-        children: [
-          Expanded(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFFFF8B6A) : Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  item.icon,
-                  style: TextStyle(fontSize: isSmallPhone ? 24 : 28),
-                ),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFFF8B6A) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(icon),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : const Color(0xFF5B6072),
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
-          SizedBox(height: isSmallPhone ? 6 : 8),
-          Text(
-            item.label,
-            style: TextStyle(
-              fontSize: isSmallPhone ? 13 : 14,
-              fontWeight: FontWeight.w600,
-              color: selected
-                  ? const Color(0xFFFF8B6A)
-                  : const Color(0xFF8A90A3),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

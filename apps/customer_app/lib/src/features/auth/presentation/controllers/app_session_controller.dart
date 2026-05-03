@@ -20,6 +20,7 @@ class AppSessionController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAdmin => _user?.role == AppUserRole.admin;
   bool get isCustomer => _user?.role == AppUserRole.customer;
+  bool get isDriver => _user?.role == AppUserRole.driver;
 
   Future<void> login({
     required String identifier,

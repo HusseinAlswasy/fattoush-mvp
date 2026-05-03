@@ -2,6 +2,7 @@ import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_dashboard_page.dart';
+import 'package:customer_app/src/features/driver/presentation/pages/driver_orders_page.dart';
 import 'package:customer_app/src/features/home/presentation/pages/home_page.dart';
 import 'package:flutter/material.dart';
 
@@ -249,7 +250,9 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
     final session = AppScope.sessionOf(context);
     final routeName = session.isAdmin
         ? AdminDashboardPage.routeName
-        : HomePage.routeName;
+        : session.isDriver
+            ? DriverOrdersPage.routeName
+            : HomePage.routeName;
     Navigator.of(context).pushReplacementNamed(routeName);
   }
 }

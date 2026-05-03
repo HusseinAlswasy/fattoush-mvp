@@ -2,6 +2,7 @@ import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/admin/data/services/admin_api_service.dart';
+import 'package:customer_app/src/features/admin/presentation/pages/admin_orders_page.dart';
 import 'package:customer_app/src/features/auth/presentation/pages/auth_page.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +57,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     try {
       results = await Future.wait([
         _adminApiService.getProducts(token),
-        _adminApiService.getOrders(token),
         _adminApiService.getDailyReport(token),
         _adminApiService.getMonthlyReport(token),
       ]);
@@ -64,7 +64,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       await Future<void>.delayed(const Duration(milliseconds: 700));
       results = await Future.wait([
         _adminApiService.getProducts(token),
-        _adminApiService.getOrders(token),
         _adminApiService.getDailyReport(token),
         _adminApiService.getMonthlyReport(token),
       ]);
@@ -72,9 +71,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     return _AdminDashboardData(
       products: results[0] as List<Product>,
-      orders: results[1] as List<Map<String, dynamic>>,
-      dailyReport: results[2] as Map<String, dynamic>,
-      monthlyReport: results[3] as Map<String, dynamic>,
+      dailyReport: results[1] as Map<String, dynamic>,
+      monthlyReport: results[2] as Map<String, dynamic>,
     );
   }
 
@@ -208,6 +206,22 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   const SizedBox(height: 22),
                   Row(
                     children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed(
+                              AdminOrdersPage.routeName,
+                            );
+                          },
+                          icon: const Icon(Icons.receipt_long_rounded),
+                          label: const Text('Open Orders Page'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    children: [
                       const Expanded(
                         child: Text(
                           'Products',
@@ -233,28 +247,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         product: product,
                         onEdit: () => _showProductDialog(product: product),
                         onToggleActive: () => _toggleProductActive(product),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  const Text(
-                    'Recent Orders',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF4A4E61),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...data.orders.take(10).map(
-                    (order) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _OrderAdminCard(
-                        order: order,
-                        onChangeStatus: (status) => _updateOrderStatus(
-                          orderId: order['id'] as String,
-                          status: status,
-                        ),
                       ),
                     ),
                   ),
@@ -294,284 +286,38 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     }
   }
 
-  Future<void> _updateOrderStatus({
-    required String orderId,
-    required String status,
-  }) async {
-    final session = AppScope.sessionOf(context);
-    try {
-      await _adminApiService.updateOrderStatus(
-        token: session.accessToken!,
-        orderId: orderId,
-        status: status,
-      );
-      if (!mounted) {
-        return;
-      }
-      context.showAppNotice(
-        title: 'Order updated',
-        message: 'Order status changed to $status.',
-        type: AppNoticeType.success,
-      );
-      await _refresh();
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      context.showHandledError(error, fallbackTitle: 'Order update failed');
-    }
-  }
-
   Future<void> _showProductDialog({Product? product}) async {
     final session = AppScope.sessionOf(context);
     final isEditing = product != null;
-    final nameController = TextEditingController(text: product?.name ?? '');
-    final priceController = TextEditingController(
-      text: product == null ? '' : product.price.toStringAsFixed(2),
-    );
-    final descriptionController = TextEditingController(
-      text: product?.description ?? '',
-    );
-    String? imageUrl = product?.imageUrl;
-    XFile? selectedImage;
-    String selectedCategory = _normalizeCategory(product?.category);
-    bool isActive = product?.isActive ?? true;
-    bool isSaving = false;
-
-    final created = await showDialog<bool>(
+    final result = await showDialog<_ProductDialogResult>(
       context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            Future<void> pickImage() async {
-              try {
-                final picked = await _imagePicker.pickImage(
-                  source: ImageSource.gallery,
-                  imageQuality: 85,
-                );
-                if (picked == null) {
-                  return;
-                }
-
-                setDialogState(() {
-                  selectedImage = picked;
-                });
-              } catch (error) {
-                if (!dialogContext.mounted) {
-                  return;
-                }
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Could not open gallery right now. Please try again.',
-                    ),
-                  ),
-                );
-              }
-            }
-
-            Future<void> submit() async {
-              setDialogState(() {
-                isSaving = true;
-              });
-
-              try {
-                var finalImageUrl = imageUrl;
-                if (selectedImage != null) {
-                  finalImageUrl = await _adminApiService.uploadProductImage(
-                    token: session.accessToken!,
-                    imagePath: selectedImage!.path,
-                  );
-                }
-
-                if (isEditing) {
-                  await _adminApiService.updateProduct(
-                    token: session.accessToken!,
-                    productId: product.id,
-                    name: nameController.text.trim(),
-                    category: selectedCategory,
-                    price: double.tryParse(priceController.text.trim()) ?? 0,
-                    description: descriptionController.text.trim(),
-                    imageUrl: finalImageUrl,
-                    isActive: isActive,
-                  );
-                } else {
-                  await _adminApiService.createProduct(
-                    token: session.accessToken!,
-                    name: nameController.text.trim(),
-                    category: selectedCategory,
-                    price: double.tryParse(priceController.text.trim()) ?? 0,
-                    description: descriptionController.text.trim(),
-                    imageUrl: finalImageUrl,
-                    isActive: isActive,
-                  );
-                }
-
-                if (!dialogContext.mounted) {
-                  return;
-                }
-                Navigator.of(dialogContext).pop(true);
-              } catch (error) {
-                if (!dialogContext.mounted) {
-                  return;
-                }
-                setDialogState(() {
-                  isSaving = false;
-                });
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      AppErrorPresenter.present(
-                        error,
-                        fallbackTitle: isEditing ? 'Save failed' : 'Create failed',
-                      ).message,
-                    ),
-                  ),
-                );
-              }
-            }
-
-            return AlertDialog(
-              title: Text(isEditing ? 'Edit product' : 'Add product'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _DialogField(controller: nameController, label: 'Name'),
-                    _DialogDropdownField(
-                      label: 'Category',
-                      value: selectedCategory,
-                      items: _productCategories,
-                      onChanged: isSaving
-                          ? null
-                          : (value) {
-                              if (value == null) {
-                                return;
-                              }
-                              setDialogState(() {
-                                selectedCategory = value;
-                              });
-                            },
-                    ),
-                    _DialogField(
-                      controller: priceController,
-                      label: 'Price',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    _DialogField(
-                      controller: descriptionController,
-                      label: 'Description',
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            selectedImage != null
-                                ? 'Selected image: ${selectedImage!.name}'
-                                : imageUrl?.isNotEmpty == true
-                                    ? 'Current image ready'
-                                    : 'No image selected',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF7D859A),
-                            ),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: isSaving ? null : pickImage,
-                          icon: const Icon(Icons.photo_library_outlined),
-                          label: const Text('From phone'),
-                        ),
-                      ],
-                    ),
-                    if (imageUrl?.isNotEmpty == true && selectedImage == null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                      child: Image.network(
-                        imageUrl!,
-                        height: 120,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                          height: 120,
-                          color: const Color(0xFFF3F5FA),
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.broken_image_outlined),
-                        ),
-                      ),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    SwitchListTile(
-                      value: isActive,
-                      onChanged: isSaving
-                          ? null
-                          : (value) {
-                              setDialogState(() {
-                                isActive = value;
-                              });
-                            },
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Visible for customers'),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: isSaving ? null : submit,
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(isEditing ? 'Save' : 'Create'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      barrierDismissible: false,
+      builder: (_) => _ProductDialog(
+        adminApiService: _adminApiService,
+        imagePicker: _imagePicker,
+        accessToken: session.accessToken!,
+        categories: _productCategories,
+        product: product,
+        normalizedCategory: _normalizeCategory(product?.category),
+      ),
     );
-
-    nameController.dispose();
-    priceController.dispose();
-    descriptionController.dispose();
 
     if (!mounted) {
       return;
     }
 
-    if (created == true) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        context.showAppNotice(
-          title: isEditing ? 'Product updated' : 'Product added',
-          message: isEditing
-              ? 'The product changes are live now.'
-              : 'The new product has been added successfully.',
-          type: AppNoticeType.success,
-        );
-      });
-      await Future<void>.delayed(const Duration(milliseconds: 80));
+    if (result?.saved == true) {
       await _refresh();
+      if (!mounted) {
+        return;
+      }
+      context.showAppNotice(
+        title: isEditing ? 'Product updated' : 'Product added',
+        message: isEditing
+            ? 'The product changes are live now.'
+            : 'The new product has been added successfully.',
+        type: AppNoticeType.success,
+      );
     }
   }
 
@@ -589,16 +335,279 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 }
 
+class _ProductDialogResult {
+  const _ProductDialogResult({required this.saved});
+
+  final bool saved;
+}
+
+class _ProductDialog extends StatefulWidget {
+  const _ProductDialog({
+    required this.adminApiService,
+    required this.imagePicker,
+    required this.accessToken,
+    required this.categories,
+    required this.normalizedCategory,
+    this.product,
+  });
+
+  final AdminApiService adminApiService;
+  final ImagePicker imagePicker;
+  final String accessToken;
+  final List<String> categories;
+  final String normalizedCategory;
+  final Product? product;
+
+  @override
+  State<_ProductDialog> createState() => _ProductDialogState();
+}
+
+class _ProductDialogState extends State<_ProductDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _descriptionController;
+
+  late String _selectedCategory;
+  late bool _isActive;
+  String? _imageUrl;
+  XFile? _selectedImage;
+  bool _isSaving = false;
+
+  bool get _isEditing => widget.product != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.product?.name ?? '');
+    _priceController = TextEditingController(
+      text: widget.product == null ? '' : widget.product!.price.toStringAsFixed(2),
+    );
+    _descriptionController = TextEditingController(
+      text: widget.product?.description ?? '',
+    );
+    _selectedCategory = widget.normalizedCategory;
+    _isActive = widget.product?.isActive ?? true;
+    _imageUrl = widget.product?.imageUrl;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final picked = await widget.imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) {
+        return;
+      }
+
+      setState(() {
+        _selectedImage = picked;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open gallery right now. Please try again.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      var finalImageUrl = _imageUrl;
+      if (_selectedImage != null) {
+        finalImageUrl = await widget.adminApiService.uploadProductImage(
+          token: widget.accessToken,
+          imagePath: _selectedImage!.path,
+        );
+      }
+
+      if (_isEditing) {
+        await widget.adminApiService.updateProduct(
+          token: widget.accessToken,
+          productId: widget.product!.id,
+          name: _nameController.text.trim(),
+          category: _selectedCategory,
+          price: double.tryParse(_priceController.text.trim()) ?? 0,
+          description: _descriptionController.text.trim(),
+          imageUrl: finalImageUrl,
+          isActive: _isActive,
+        );
+      } else {
+        await widget.adminApiService.createProduct(
+          token: widget.accessToken,
+          name: _nameController.text.trim(),
+          category: _selectedCategory,
+          price: double.tryParse(_priceController.text.trim()) ?? 0,
+          description: _descriptionController.text.trim(),
+          imageUrl: finalImageUrl,
+          isActive: _isActive,
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop(const _ProductDialogResult(saved: true));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isSaving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppErrorPresenter.present(
+              error,
+              fallbackTitle: _isEditing ? 'Save failed' : 'Create failed',
+            ).message,
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(_isEditing ? 'Edit product' : 'Add product'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _DialogField(controller: _nameController, label: 'Name'),
+            _DialogDropdownField(
+              label: 'Category',
+              value: _selectedCategory,
+              items: widget.categories,
+              onChanged: _isSaving
+                  ? null
+                  : (value) {
+                      if (value == null) {
+                        return;
+                      }
+                      setState(() {
+                        _selectedCategory = value;
+                      });
+                    },
+            ),
+            _DialogField(
+              controller: _priceController,
+              label: 'Price',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            _DialogField(
+              controller: _descriptionController,
+              label: 'Description',
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedImage != null
+                        ? 'Selected image: ${_selectedImage!.name}'
+                        : _imageUrl?.isNotEmpty == true
+                            ? 'Current image ready'
+                            : 'No image selected',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF7D859A),
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _isSaving ? null : _pickImage,
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('From phone'),
+                ),
+              ],
+            ),
+            if (_imageUrl?.isNotEmpty == true && _selectedImage == null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    _imageUrl!,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      height: 120,
+                      color: const Color(0xFFF3F5FA),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.broken_image_outlined),
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              value: _isActive,
+              onChanged: _isSaving
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _isActive = value;
+                      });
+                    },
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Visible for customers'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving
+              ? null
+              : () => Navigator.of(context).pop(const _ProductDialogResult(saved: false)),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSaving ? null : _submit,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(_isEditing ? 'Save' : 'Create'),
+        ),
+      ],
+    );
+  }
+}
+
 class _AdminDashboardData {
   const _AdminDashboardData({
     required this.products,
-    required this.orders,
     required this.dailyReport,
     required this.monthlyReport,
   });
 
   final List<Product> products;
-  final List<Map<String, dynamic>> orders;
   final Map<String, dynamic> dailyReport;
   final Map<String, dynamic> monthlyReport;
 }
@@ -736,112 +745,6 @@ class _ProductAdminCard extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _OrderAdminCard extends StatelessWidget {
-  const _OrderAdminCard({
-    required this.order,
-    required this.onChangeStatus,
-  });
-
-  final Map<String, dynamic> order;
-  final Future<void> Function(String status) onChangeStatus;
-
-  static const List<String> _statuses = [
-    'PENDING',
-    'CONFIRMED',
-    'ASSIGNED',
-    'PICKED_UP',
-    'ON_THE_WAY',
-    'DELIVERED',
-    'CANCELLED',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final user = order['user'] as Map<String, dynamic>?;
-    final items = order['items'] as List<dynamic>? ?? const [];
-    final status = order['status'] as String? ?? 'PENDING';
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Order #${order['id']}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF4A4E61),
-                  ),
-                ),
-              ),
-              _Tag(
-                label: status.replaceAll('_', ' '),
-                color: _statusColor(status),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text('Customer: ${user?['name'] ?? user?['email'] ?? 'Unknown'}'),
-          Text('Items: ${items.length}'),
-          Text('Total: AED ${order['total']}'),
-          if ((order['addressText'] as String?)?.isNotEmpty == true)
-            Text(
-              'Address: ${order['addressText']}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _statuses.map((candidate) {
-                final selected = candidate == status;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: OutlinedButton(
-                    onPressed: selected ? null : () => onChangeStatus(candidate),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _statusColor(candidate),
-                      side: BorderSide(color: _statusColor(candidate).withValues(alpha: 0.35)),
-                    ),
-                    child: Text(candidate.replaceAll('_', ' ')),
-                  ),
-                );
-              }).toList(growable: false),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'DELIVERED':
-        return const Color(0xFF3BAA64);
-      case 'ON_THE_WAY':
-      case 'PICKED_UP':
-        return const Color(0xFFFF8B6A);
-      case 'CONFIRMED':
-      case 'ASSIGNED':
-        return const Color(0xFF6B7BFF);
-      case 'CANCELLED':
-        return const Color(0xFFD94C4C);
-      default:
-        return const Color(0xFF9CA3B7);
-    }
   }
 }
 
