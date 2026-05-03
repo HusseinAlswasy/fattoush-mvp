@@ -27,9 +27,12 @@ Copy-Item .env.example .env
 
 ```env
 PORT=3000
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/fattoush_mvp?schema=public"
-JWT_SECRET="super-secret-change-me"
+DATABASE_URL="postgresql://postgres:your_strong_db_password@localhost:5432/fattoush_mvp?schema=public"
+JWT_SECRET="replace_with_a_long_random_secret"
 JWT_EXPIRES_IN="7d"
+ENABLE_SWAGGER="true"
+CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
+SEED_DEMO_PASSWORD="ChangeMeBeforeSeeding!"
 ```
 
 3. Install packages:
@@ -89,8 +92,11 @@ npm.cmd run start:dev
 - `POST /api/admin/orders/:id/status`
 - `GET /api/driver/orders`
 
-## Notes
+## Security Notes
 
 - Environment secrets are not committed.
+- `JWT_SECRET` must be replaced with a strong value before production.
+- Swagger should be disabled in production unless explicitly needed.
+- `CORS_ORIGINS` should contain only your trusted app domains.
 - Uploaded images are stored in the local `uploads/` folder during development.
 - Payment gateway, notifications, and production media storage still need production integration.

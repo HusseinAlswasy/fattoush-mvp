@@ -13,7 +13,11 @@ const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
 async function main() {
-  const demoPassword = 'Fattoush#2026!Secure';
+  const demoPassword = process.env.SEED_DEMO_PASSWORD;
+  if (!demoPassword) {
+    throw new Error('SEED_DEMO_PASSWORD is required before running the seed.');
+  }
+
   const passwordHash = await bcrypt.hash(demoPassword, 10);
 
   const admin = await prisma.user.upsert({
@@ -195,7 +199,7 @@ async function main() {
     admin: 'admin@fattoush.app',
     driver: 'driver@fattoush.app',
     customer: 'customer@fattoush.app',
-    password: demoPassword,
+    passwordConfigured: true,
   });
 }
 

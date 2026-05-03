@@ -62,10 +62,11 @@ Current local demo accounts:
 - Customer: `customer@fattoush.app`
 - Driver: `driver@fattoush.app`
 
-Passwords may differ locally if they were changed in the development database.
+Passwords are intentionally not stored in the repository. Set `SEED_DEMO_PASSWORD` locally before seeding.
 
 ## Notes
 
 - This repository is prepared for local development and MVP iteration.
 - Secrets are intentionally excluded from source control.
 - Uploaded product images are stored locally during development and are excluded from Git.
+- Before production deployment, restrict `CORS_ORIGINS`, use a strong `JWT_SECRET`, and disable Swagger unless needed.
