@@ -1,20 +1,24 @@
 # Fattoush MVP
 
-Fattoush is a multi-app grocery delivery MVP built for three roles:
+Fattoush supermarket MVP with Flutter mobile app and NestJS backend for customer, admin, and delivery workflows.
 
-- Customer app
-- Admin panel
-- Driver operations
+## Overview
 
-This repository currently contains:
+Fattoush is a multi-app grocery delivery MVP built around three roles:
 
-- A Flutter customer app with admin capabilities for local MVP testing
+- Customer
+- Admin
+- Driver
+
+This repository currently includes:
+
+- A Flutter mobile app used for customer flows and local admin testing
 - A NestJS backend with Prisma and PostgreSQL
 
 ## Project Structure
 
 ```text
-1-mvp-3-backend-login-checkout/
+.
 ├── api/                 # NestJS backend + Prisma
 └── apps/
     └── customer_app/    # Flutter mobile app
@@ -25,12 +29,12 @@ This repository currently contains:
 - Browse products as guest
 - Register and login as customer or admin
 - Cart and checkout flow
-- Cash on delivery and card UI flow
-- Orders saved to PostgreSQL
+- Cash on delivery and card payment UI flow
+- Orders stored in PostgreSQL
 - Customer order history
 - Admin product management
-- Admin order status management
-- Product image picking from phone gallery
+- Admin order status updates
+- Local image upload during development
 
 ## Tech Stack
 
@@ -42,17 +46,17 @@ This repository currently contains:
 
 ## Local Development
 
-### 1. Backend
+### Backend
 
-See the backend setup guide in:
+See:
 
-- [api/README.md](C:\Users\RTX\Documents\Codex\2026-04-30\1-mvp-3-backend-login-checkout\api\README.md)
+- [api/README.md](api/README.md)
 
-### 2. Flutter app
+### Mobile App
 
-See the mobile app setup guide in:
+See:
 
-- [apps/customer_app/README.md](C:\Users\RTX\Documents\Codex\2026-04-30\1-mvp-3-backend-login-checkout\apps\customer_app\README.md)
+- [apps/customer_app/README.md](apps/customer_app/README.md)
 
 ## Demo Accounts
 
@@ -64,9 +68,8 @@ Current local demo accounts:
 
 Passwords are intentionally not stored in the repository. Set `SEED_DEMO_PASSWORD` locally before seeding.
 
-## Notes
+## Security Notes
 
-- This repository is prepared for local development and MVP iteration.
 - Secrets are intentionally excluded from source control.
 - Uploaded product images are stored locally during development and are excluded from Git.
 - Before production deployment, restrict `CORS_ORIGINS`, use a strong `JWT_SECRET`, and disable Swagger unless needed.
