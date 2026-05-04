@@ -27,8 +27,8 @@ class DriverOrderDetailsPage extends StatelessWidget {
         return;
       }
       context.showAppNotice(
-        title: 'Order accepted',
-        message: 'The order is now assigned to you.',
+        title: 'Order received',
+        message: 'The order is now with the driver.',
         type: AppNoticeType.success,
       );
       Navigator.of(context).pop(true);
@@ -114,6 +114,9 @@ class DriverOrderDetailsPage extends StatelessWidget {
     final user = order['user'] as Map<String, dynamic>?;
     final items = order['items'] as List<dynamic>? ?? const [];
     final status = (order['status'] as String? ?? 'PENDING').toUpperCase();
+    final displayStatus = status == 'CONFIRMED'
+        ? 'RECEIVED'
+        : status.replaceAll('_', ' ');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
@@ -153,7 +156,7 @@ class DriverOrderDetailsPage extends StatelessWidget {
                   Text('Customer: ${user?['name'] ?? user?['email'] ?? 'Unknown'}'),
                   Text('Phone: ${user?['phone'] ?? 'Not provided'}'),
                   Text('Payment: ${order['paymentMethod'] ?? 'N/A'}'),
-                  Text('Status: ${status.replaceAll('_', ' ')}'),
+                  Text('Status: $displayStatus'),
                   Text('Total: AED ${order['total']}'),
                   const SizedBox(height: 10),
                   if ((order['addressText'] as String?)?.isNotEmpty == true)
@@ -203,58 +206,42 @@ class DriverOrderDetailsPage extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: () => _openMap(context),
                 icon: const Icon(Icons.map_outlined),
-                label: const Text('الذهاب للموقع'),
+                label: const Text('Go to location'),
               ),
             ),
-            const SizedBox(height: 10),
-            if (status == 'ASSIGNED' || status == 'PENDING')
+            if (status == 'ASSIGNED' || status == 'PENDING') ...[
+              const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () => _acceptOrder(context),
-                  child: const Text('قبول الطلب'),
+                  child: const Text('استلام الطلب'),
                 ),
               ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _StatusActionButton(
-                  label: 'Picked Up',
-                  onTap: () => _updateStatus(context, 'PICKED_UP'),
+            ],
+            if (status == 'CONFIRMED') ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => _updateStatus(context, 'ON_THE_WAY'),
+                  child: const Text('تأكيد الاستلام والبدء في التوصيل'),
                 ),
-                _StatusActionButton(
-                  label: 'On The Way',
-                  onTap: () => _updateStatus(context, 'ON_THE_WAY'),
+              ),
+            ],
+            if (status == 'ON_THE_WAY' || status == 'PICKED_UP') ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => _updateStatus(context, 'DELIVERED'),
+                  child: const Text('تم التوصيل'),
                 ),
-                _StatusActionButton(
-                  label: 'Delivered',
-                  onTap: () => _updateStatus(context, 'DELIVERED'),
-                ),
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatusActionButton extends StatelessWidget {
-  const _StatusActionButton({
-    required this.label,
-    required this.onTap,
-  });
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      child: Text(label),
     );
   }
 }

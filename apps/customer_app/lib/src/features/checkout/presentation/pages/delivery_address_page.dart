@@ -3,6 +3,7 @@ import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/checkout/data/models/checkout_draft.dart';
 import 'package:customer_app/src/features/checkout/presentation/pages/payment_method_page.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 class DeliveryAddressPage extends StatefulWidget {
   const DeliveryAddressPage({super.key});
@@ -20,6 +21,10 @@ class _DeliveryAddressPageState extends State<DeliveryAddressPage> {
   final TextEditingController _floorController = TextEditingController();
   final TextEditingController _zipController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
+  bool _isLocating = false;
+  double? _latitude;
+  double? _longitude;
+  String? _gpsSummary;
 
   String _selectedCity = 'القاهرة';
   String _selectedDate = 'Today';
@@ -91,6 +96,12 @@ class _DeliveryAddressPageState extends State<DeliveryAddressPage> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    _GpsLocationCard(
+                      isLocating: _isLocating,
+                      gpsSummary: _gpsSummary,
+                      onUseLocation: _captureCurrentLocation,
                     ),
                     const SizedBox(height: 16),
                     const _FieldLabel('City'),
@@ -186,6 +197,15 @@ class _DeliveryAddressPageState extends State<DeliveryAddressPage> {
                             );
                             return;
                           }
+                          if (_latitude == null || _longitude == null) {
+                            context.showAppNotice(
+                              title: 'Location required',
+                              message:
+                                  'Please use your current GPS location so the driver can reach you.',
+                              type: AppNoticeType.warning,
+                            );
+                            return;
+                          }
 
                           final segments = <String>[
                             _selectedCity,
@@ -204,6 +224,8 @@ class _DeliveryAddressPageState extends State<DeliveryAddressPage> {
 
                           final checkout = CheckoutDraft(
                             addressText: segments.join(', '),
+                            lat: _latitude,
+                            lng: _longitude,
                             deliveryDate: _selectedDate,
                             deliveryTime: _selectedTime,
                             comment: _commentController.text.trim(),
@@ -240,6 +262,91 @@ class _DeliveryAddressPageState extends State<DeliveryAddressPage> {
       ),
     );
   }
+
+  Future<void> _captureCurrentLocation() async {
+    if (_isLocating) {
+      return;
+    }
+
+    setState(() {
+      _isLocating = true;
+    });
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw _LocationMessageException(
+          'Please turn on GPS on your phone, then try again.',
+        );
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        throw _LocationMessageException(
+          'Location permission is needed to send the driver to your address.',
+        );
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw _LocationMessageException(
+          'Location permission is blocked. Please allow it from phone settings.',
+        );
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _gpsSummary =
+            'GPS pinned: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+      });
+
+      context.showAppNotice(
+        title: 'Location saved',
+        message: 'Your current GPS location is ready for the driver.',
+        type: AppNoticeType.success,
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      final message = error is _LocationMessageException
+          ? error.message
+          : 'We could not get your current location. Please try again.';
+
+      context.showAppNotice(
+        title: 'Location failed',
+        message: message,
+        type: AppNoticeType.warning,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLocating = false;
+        });
+      }
+    }
+  }
+}
+
+class _LocationMessageException implements Exception {
+  const _LocationMessageException(this.message);
+
+  final String message;
 }
 
 class _ResponsiveTwoColumn extends StatelessWidget {
@@ -271,6 +378,88 @@ class _ResponsiveTwoColumn extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(child: second),
       ],
+    );
+  }
+}
+
+class _GpsLocationCard extends StatelessWidget {
+  const _GpsLocationCard({
+    required this.isLocating,
+    required this.gpsSummary,
+    required this.onUseLocation,
+  });
+
+  final bool isLocating;
+  final String? gpsSummary;
+  final VoidCallback onUseLocation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.my_location_rounded,
+                color: Color(0xFFFF8B6A),
+                size: 20,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'GPS delivery point',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF4A4E61),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            gpsSummary ??
+                'Use your current location so the driver can open the map and come directly to you.',
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: Color(0xFF8E96AA),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: isLocating ? null : onUseLocation,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFF8B6A),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              icon: isLocating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.gps_fixed_rounded),
+              label: Text(isLocating ? 'Getting location...' : 'Use current location'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

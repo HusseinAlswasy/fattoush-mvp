@@ -25,6 +25,11 @@ class AdminApiService {
     return response.cast<Map<String, dynamic>>();
   }
 
+  Future<List<Map<String, dynamic>>> getDrivers(String token) async {
+    final response = await _client.getList('/admin/drivers', token: token);
+    return response.cast<Map<String, dynamic>>();
+  }
+
   Future<Map<String, dynamic>> getDailyReport(String token) {
     return _client.getObject('/admin/reports/daily', token: token);
   }
@@ -127,6 +132,18 @@ class AdminApiService {
       '/admin/orders/$orderId/status',
       token: token,
       body: {'status': status},
+    );
+  }
+
+  Future<void> assignDriver({
+    required String token,
+    required String orderId,
+    required String driverId,
+  }) async {
+    await _client.postObject(
+      '/admin/orders/$orderId/assign-driver',
+      token: token,
+      body: {'driverId': driverId},
     );
   }
 }

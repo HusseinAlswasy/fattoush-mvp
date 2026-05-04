@@ -26,6 +26,11 @@ export class AdminController {
     return this.ordersService.getOrderById(id);
   }
 
+  @Get('drivers')
+  getDrivers() {
+    return this.ordersService.getDrivers();
+  }
+
   @Post('orders/:id/assign-driver')
   assignDriver(@Param('id') id: string, @Body() dto: AssignDriverDto) {
     return this.ordersService.assignDriver(id, dto.driverId);

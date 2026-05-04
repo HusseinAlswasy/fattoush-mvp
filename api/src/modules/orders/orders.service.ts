@@ -131,6 +131,20 @@ export class OrdersService {
     });
   }
 
+  getDrivers() {
+    return this.prisma.user.findMany({
+      where: { role: 'DRIVER' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   async getOrderById(id: string) {
     const order = await this.prisma.order.findUnique({
       where: { id },
@@ -194,11 +208,26 @@ export class OrdersService {
 
   async updateOrderStatus(id: string, status: OrderStatus) {
     const order = await this.findOrderById(id);
+    let assignedDriverId = order.assignedDriverId;
+
+    if (status === OrderStatus.ASSIGNED && !assignedDriverId) {
+      const fallbackDriver = await this.prisma.user.findFirst({
+        where: { role: 'DRIVER' },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (!fallbackDriver) {
+        throw new BadRequestException('No driver is available to assign this order.');
+      }
+
+      assignedDriverId = fallbackDriver.id;
+    }
 
     return this.prisma.order.update({
       where: { id: order.id },
       data: {
         status,
+        assignedDriverId,
         paymentStatus: status === OrderStatus.DELIVERED ? PaymentStatus.PAID : undefined,
       },
       include: {
