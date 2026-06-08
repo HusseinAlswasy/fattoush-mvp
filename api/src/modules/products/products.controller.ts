@@ -64,7 +64,7 @@ export class ProductsController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   @Post('admin/products/with-image')
-  createProductWithImage(
+  async createProductWithImage(
     @Body() body: Record<string, string | undefined>,
     @UploadedFile()
     file?: { originalname?: string; mimetype?: string; buffer: Buffer },
@@ -80,7 +80,7 @@ export class ProductsController {
       throw new BadRequestException('Product price is invalid.');
     }
 
-    return this.productsService.createProduct({
+    const product = await this.productsService.createProduct({
       name,
       category: body.category?.trim() || 'Other',
       description: body.description?.trim() || undefined,
@@ -88,6 +88,7 @@ export class ProductsController {
       imageUrl: file ? this.toDataImageUrl(file) : undefined,
       isActive: this.parseBoolean(body.isActive, true),
     });
+    return { success: true, id: product.id };
   }
 
   private toDataImageUrl(file?: {

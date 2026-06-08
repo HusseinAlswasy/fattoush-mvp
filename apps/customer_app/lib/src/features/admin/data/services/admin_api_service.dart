@@ -1,5 +1,6 @@
 import 'package:customer_app/src/core/network/api_client.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
+import 'package:image/image.dart' as image_tools;
 import 'package:image_picker/image_picker.dart';
 
 class AdminApiService {
@@ -41,12 +42,13 @@ class AdminApiService {
     required String token,
     required XFile image,
   }) async {
+    final imageBytes = await _optimizedProductImageBytes(image);
     final response = await _client.uploadFile(
       '/admin/products/upload-image',
       token: token,
       fieldName: 'file',
-      bytes: await image.readAsBytes(),
-      fileName: image.name.isEmpty ? 'product-image.jpg' : image.name,
+      bytes: imageBytes,
+      fileName: 'product-image.jpg',
     );
     final imageUrl = response['imageUrl'];
     if (imageUrl is String && imageUrl.isNotEmpty) {
@@ -69,13 +71,14 @@ class AdminApiService {
     required XFile image,
     String? description,
   }) async {
+    final imageBytes = await _optimizedProductImageBytes(image);
     try {
       await _client.uploadFile(
         '/admin/products/with-image',
         token: token,
         fieldName: 'file',
-        bytes: await image.readAsBytes(),
-        fileName: image.name.isEmpty ? 'product-image.jpg' : image.name,
+        bytes: imageBytes,
+        fileName: 'product-image.jpg',
         fields: {
           'name': name,
           'category': category,
@@ -89,7 +92,21 @@ class AdminApiService {
         rethrow;
       }
 
-      final imageUrl = await uploadProductImage(token: token, image: image);
+      final response = await _client.uploadFile(
+        '/admin/products/upload-image',
+        token: token,
+        fieldName: 'file',
+        bytes: imageBytes,
+        fileName: 'product-image.jpg',
+      );
+      final imageUrl = response['imageUrl'];
+      if (imageUrl is! String || imageUrl.isEmpty) {
+        throw ApiException(
+          path: '/admin/products/upload-image',
+          statusCode: 502,
+          serverMessage: 'Image upload did not return a usable URL.',
+        );
+      }
       await createProduct(
         token: token,
         name: name,
@@ -100,6 +117,57 @@ class AdminApiService {
         isActive: isActive,
       );
     }
+  }
+
+  Future<List<int>> _optimizedProductImageBytes(XFile image) async {
+    final originalBytes = await image.readAsBytes();
+    final decoded = image_tools.decodeImage(originalBytes);
+    if (decoded == null) {
+      if (originalBytes.length <= _maxProductImageBytes) {
+        return originalBytes;
+      }
+
+      throw ApiException(
+        path: '/admin/products/upload-image',
+        statusCode: 413,
+        serverMessage:
+            'Image is too large. Please choose a smaller photo or screenshot.',
+      );
+    }
+
+    final resized = _resizeForProduct(decoded);
+    var quality = 70;
+    var encoded = image_tools.encodeJpg(resized, quality: quality);
+    while (encoded.length > _maxProductImageBytes && quality > 35) {
+      quality -= 10;
+      encoded = image_tools.encodeJpg(resized, quality: quality);
+    }
+
+    if (encoded.length <= _maxProductImageBytes) {
+      return encoded;
+    }
+
+    final tiny = image_tools.copyResize(
+      decoded,
+      width: decoded.width >= decoded.height ? 260 : null,
+      height: decoded.height > decoded.width ? 260 : null,
+      interpolation: image_tools.Interpolation.average,
+    );
+    return image_tools.encodeJpg(tiny, quality: 45);
+  }
+
+  image_tools.Image _resizeForProduct(image_tools.Image source) {
+    const maxSide = 420;
+    if (source.width <= maxSide && source.height <= maxSide) {
+      return source;
+    }
+
+    return image_tools.copyResize(
+      source,
+      width: source.width >= source.height ? maxSide : null,
+      height: source.height > source.width ? maxSide : null,
+      interpolation: image_tools.Interpolation.average,
+    );
   }
 
   Future<void> createProduct({
@@ -196,3 +264,5 @@ class AdminApiService {
     );
   }
 }
+
+const int _maxProductImageBytes = 140 * 1024;

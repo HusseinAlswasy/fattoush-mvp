@@ -107,6 +107,13 @@ class AppErrorPresenter {
       );
     }
 
+    if (error.statusCode == 413) {
+      return const AppErrorPresentation(
+        title: 'Image too large',
+        message: 'Please choose a smaller product photo and try again.',
+      );
+    }
+
     if (error.statusCode >= 500) {
       return const AppErrorPresentation(
         title: 'Server error',
