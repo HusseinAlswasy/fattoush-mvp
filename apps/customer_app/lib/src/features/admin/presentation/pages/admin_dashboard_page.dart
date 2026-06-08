@@ -10,6 +10,7 @@ import 'package:customer_app/src/features/admin/data/services/admin_api_service.
 import 'package:customer_app/src/features/admin/presentation/pages/admin_orders_page.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_settings_page.dart';
 import 'package:customer_app/src/features/admin/presentation/widgets/admin_bottom_nav.dart';
+import 'package:customer_app/src/features/admin/utils/product_image_data_url.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1117,9 +1118,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       final picked = await widget.imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 360,
-        maxHeight: 360,
-        imageQuality: 45,
+        maxWidth: 420,
+        maxHeight: 420,
+        imageQuality: 35,
       );
       if (picked == null || !mounted) return;
       setState(() {
@@ -1155,17 +1156,12 @@ class _ProductDialogState extends State<_ProductDialog> {
     setState(() => _isSaving = true);
 
     try {
-      final selectedImage = _selectedImage;
+      var finalImageUrl = _imageUrl;
+      if (_selectedImage != null) {
+        finalImageUrl = await ProductImageDataUrl.fromXFile(_selectedImage!);
+      }
 
       if (_isEditing) {
-        final finalImageUrl = selectedImage == null
-            ? _imageUrl
-            : await widget.adminApiService
-                .uploadProductImage(
-                  token: widget.accessToken,
-                  image: selectedImage,
-                )
-                .timeout(const Duration(seconds: 45));
         await widget.adminApiService
             .updateProduct(
               token: widget.accessToken,
@@ -1177,44 +1173,37 @@ class _ProductDialogState extends State<_ProductDialog> {
               imageUrl: finalImageUrl,
               isActive: _isActive,
             )
-            .timeout(const Duration(seconds: 25));
+            .timeout(const Duration(seconds: 14));
       } else {
-        if (selectedImage == null) {
-          await widget.adminApiService
-              .createProduct(
-                token: widget.accessToken,
-                name: name,
-                category: _selectedCategory,
-                price: price,
-                description: _descriptionController.text.trim(),
-                imageUrl: _imageUrl,
-                isActive: _isActive,
-              )
-              .timeout(const Duration(seconds: 25));
-        } else {
-          await widget.adminApiService
-              .createProductWithImage(
-                token: widget.accessToken,
-                name: name,
-                category: _selectedCategory,
-                price: price,
-                description: _descriptionController.text.trim(),
-                image: selectedImage,
-                isActive: _isActive,
-              )
-              .timeout(const Duration(seconds: 60));
-        }
+        await widget.adminApiService
+            .createProduct(
+              token: widget.accessToken,
+              name: name,
+              category: _selectedCategory,
+              price: price,
+              description: _descriptionController.text.trim(),
+              imageUrl: finalImageUrl,
+              isActive: _isActive,
+            )
+            .timeout(const Duration(seconds: 14));
       }
 
       if (!mounted) return;
       Navigator.of(context).pop(const _ProductDialogResult(saved: true));
+    } on ProductImageTooLargeException {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image is too large. Please choose a smaller photo.'),
+        ),
+      );
     } on TimeoutException {
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              'Saving took too long. Please check internet and try again.'),
+          content: Text('Saving took too long. Please try a smaller image.'),
         ),
       );
     } on ApiConnectionException {
