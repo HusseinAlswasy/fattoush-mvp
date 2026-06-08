@@ -27,7 +27,7 @@ class ProductImageView extends StatelessWidget {
       );
     }
 
-    if (value.startsWith('data:image')) {
+    if (value.startsWith('data:')) {
       try {
         return Image.memory(
           UriData.parse(value).contentAsBytes(),

@@ -51,11 +51,31 @@ export class ProductsController {
   @UseInterceptors(FileInterceptor('file'))
   @Post('admin/products/upload-image')
   uploadProductImage(
-    @UploadedFile() file: { mimetype?: string; buffer: Buffer },
+    @UploadedFile()
+    file: { originalname?: string; mimetype?: string; buffer: Buffer },
   ) {
-    const mimeType = file?.mimetype || 'image/jpeg';
+    const mimeType = this.getImageMimeType(file?.mimetype, file?.originalname);
     const imageUrl = `data:${mimeType};base64,${file.buffer.toString('base64')}`;
     return { imageUrl };
+  }
+
+  private getImageMimeType(mimeType?: string, fileName?: string) {
+    if (mimeType?.startsWith('image/')) {
+      return mimeType;
+    }
+
+    const normalizedName = fileName?.toLowerCase() ?? '';
+    if (normalizedName.endsWith('.png')) {
+      return 'image/png';
+    }
+    if (normalizedName.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    if (normalizedName.endsWith('.gif')) {
+      return 'image/gif';
+    }
+
+    return 'image/jpeg';
   }
 
   @ApiBearerAuth()
