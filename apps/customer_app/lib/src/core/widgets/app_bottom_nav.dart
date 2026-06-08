@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 enum AppBottomNavTab {
   home,
   restaurants,
+  cart,
   orders,
   profile,
 }
@@ -27,19 +28,19 @@ class AppBottomNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        margin: EdgeInsets.fromLTRB(16, 0, 16, compact ? 10 : 14),
+        margin: EdgeInsets.fromLTRB(20, 0, 20, compact ? 10 : 14),
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 6 : 10,
-          vertical: compact ? 6 : 8,
+          vertical: compact ? 7 : 9,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -54,15 +55,23 @@ class AppBottomNav extends StatelessWidget {
               onTap: () => _navigateTo(context, AppBottomNavTab.home),
             ),
             _NavItem(
-              icon: Icons.restaurant_menu_rounded,
+              icon: Icons.restaurant_rounded,
               label: 'Restaurants',
               compact: compact,
               selected: currentTab == AppBottomNavTab.restaurants,
               onTap: () => _navigateTo(context, AppBottomNavTab.restaurants),
             ),
             _NavItem(
-              icon: Icons.shopping_bag_rounded,
-              label: 'Order',
+              icon: Icons.shopping_cart_rounded,
+              label: 'Cart',
+              compact: compact,
+              prominent: true,
+              selected: currentTab == AppBottomNavTab.cart,
+              onTap: () => _navigateTo(context, AppBottomNavTab.cart),
+            ),
+            _NavItem(
+              icon: Icons.receipt_long_rounded,
+              label: 'Orders',
               compact: compact,
               selected: currentTab == AppBottomNavTab.orders,
               onTap: () => _navigateTo(context, AppBottomNavTab.orders),
@@ -88,7 +97,8 @@ class AppBottomNav extends StatelessWidget {
     final routeName = switch (tab) {
       AppBottomNavTab.home => HomePage.routeName,
       AppBottomNavTab.restaurants => CategoriesPage.routeName,
-      AppBottomNavTab.orders => CartPage.routeName,
+      AppBottomNavTab.cart => CartPage.routeName,
+      AppBottomNavTab.orders => ProfilePage.routeName,
       AppBottomNavTab.profile => ProfilePage.routeName,
     };
 
@@ -103,6 +113,7 @@ class _NavItem extends StatelessWidget {
     required this.compact,
     required this.selected,
     required this.onTap,
+    this.prominent = false,
   });
 
   final IconData icon;
@@ -110,30 +121,50 @@ class _NavItem extends StatelessWidget {
   final bool compact;
   final bool selected;
   final VoidCallback onTap;
+  final bool prominent;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFFFF8B6A) : const Color(0xFFB8BECC);
+    final color = selected ? const Color(0xFFFF5A52) : const Color(0xFF7C8294);
 
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: compact ? 4 : 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: compact ? 20 : 22),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                width: prominent ? (compact ? 50 : 58) : 34,
+                height: prominent ? (compact ? 50 : 58) : 34,
+                decoration: BoxDecoration(
+                  color: prominent
+                      ? const Color(0xFFFF5A52)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(prominent ? 18 : 12),
+                ),
+                child: Icon(
+                  icon,
+                  color: prominent ? Colors.white : color,
+                  size: prominent ? (compact ? 25 : 29) : (compact ? 22 : 24),
+                ),
+              ),
               SizedBox(height: compact ? 2 : 4),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: compact ? 9.5 : 11,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    color: color,
+                    fontSize: compact ? 9.5 : 12,
+                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                    color: prominent
+                        ? (selected
+                            ? const Color(0xFF9D362F)
+                            : const Color(0xFF7C8294))
+                        : color,
                   ),
                 ),
               ),

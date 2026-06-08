@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { RateProductDto } from './dto/rate-product.dto';
 import { OrdersService } from './orders.service';
 
 @ApiTags('orders')
@@ -36,5 +37,18 @@ export class OrdersController {
   @Get('customer/orders/:id')
   getCustomerOrderById(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.ordersService.getCustomerOrderById(user.sub, id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER)
+  @Post('customer/orders/:orderId/products/:productId/rating')
+  rateProduct(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('orderId') orderId: string,
+    @Param('productId') productId: string,
+    @Body() dto: RateProductDto,
+  ) {
+    return this.ordersService.rateProduct(user.sub, orderId, productId, dto);
   }
 }

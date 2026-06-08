@@ -43,4 +43,22 @@ class OrdersApiService {
         .map(CustomerOrder.fromJson)
         .toList(growable: false);
   }
+
+  Future<void> rateProduct({
+    required String token,
+    required String orderId,
+    required String productId,
+    required int rating,
+    String? comment,
+  }) async {
+    await _client.postObject(
+      '/customer/orders/$orderId/products/$productId/rating',
+      token: token,
+      body: {
+        'rating': rating,
+        if (comment != null && comment.trim().isNotEmpty)
+          'comment': comment.trim(),
+      },
+    );
+  }
 }

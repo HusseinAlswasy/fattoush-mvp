@@ -1,4 +1,5 @@
 import 'package:customer_app/src/core/errors/app_error_presenter.dart';
+import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_dashboard_page.dart';
@@ -51,6 +52,7 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final session = AppScope.sessionOf(context);
+    final preferences = AppScope.preferencesOf(context);
     final size = MediaQuery.sizeOf(context);
     final isSmall = size.height < 760;
     final headerHeight = isSmall ? 132.0 : 162.0;
@@ -59,8 +61,10 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
       backgroundColor: const Color(0xFFF9FBF5),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: session,
+          listenable: Listenable.merge([session, preferences]),
           builder: (context, _) {
+            final isArabic = preferences.isArabic;
+
             return Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -86,9 +90,7 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                           left: 24,
                           right: 24,
                         ),
-                        child: _TopLogo(
-                          height: isSmall ? 110 : 132,
-                        ),
+                        child: _TopLogo(height: isSmall ? 110 : 132),
                       ),
                     ),
                     Transform.translate(
@@ -127,19 +129,19 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
-                                labelPadding: const EdgeInsets.symmetric(horizontal: 18),
+                                labelPadding:
+                                    const EdgeInsets.symmetric(horizontal: 18),
                                 indicator: BoxDecoration(
                                   color: const Color(0xFF2E7D1F),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 labelColor: Colors.white,
                                 unselectedLabelColor: const Color(0xFF75836A),
-                                labelStyle: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                tabs: const [
-                                  Tab(text: 'دخول'),
-                                  Tab(text: 'إنشاء حساب'),
+                                labelStyle:
+                                    const TextStyle(fontWeight: FontWeight.w800),
+                                tabs: [
+                                  Tab(text: context.tr('Login', 'دخول')),
+                                  Tab(text: context.tr('Create Account', 'إنشاء حساب')),
                                 ],
                               ),
                             ),
@@ -149,8 +151,8 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                               child: TabBarView(
                                 controller: _tabController,
                                 children: [
-                                  _buildLogin(session),
-                                  _buildRegister(session),
+                                  _buildLogin(session, isArabic),
+                                  _buildRegister(session, isArabic),
                                 ],
                               ),
                             ),
@@ -168,23 +170,26 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildLogin(AppSessionController session) {
+  Widget _buildLogin(AppSessionController session, bool isArabic) {
     return SingleChildScrollView(
       child: Column(
         children: [
-          const Text(
-            'تسجيل الدخول',
-            style: TextStyle(
+          Text(
+            context.tr('Login', 'تسجيل الدخول'),
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w900,
               color: Color(0xFF2E7D1F),
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'أهلاً بك، سجّل دخولك علشان نكمل طلبك',
+          Text(
+            context.tr(
+              'Welcome back, sign in to continue your order',
+              'أهلًا بك، سجّل دخولك علشان نكمل طلبك',
+            ),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF6B7968),
               fontWeight: FontWeight.w500,
@@ -195,13 +200,17 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
           const SizedBox(height: 16),
           _BrandInput(
             controller: _loginIdentifierController,
-            hintText: 'رقم الهاتف أو البريد الإلكتروني',
+            hintText: context.tr(
+              'Phone number or email',
+              'رقم الهاتف أو البريد الإلكتروني',
+            ),
             prefixIcon: Icons.phone_rounded,
+            isArabic: isArabic,
           ),
           const SizedBox(height: 14),
           _BrandInput(
             controller: _loginPasswordController,
-            hintText: 'كلمة المرور',
+            hintText: context.tr('Password', 'كلمة المرور'),
             prefixIcon: Icons.lock_rounded,
             obscureText: !_showLoginPassword,
             suffixIcon: _showLoginPassword
@@ -212,23 +221,26 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                 _showLoginPassword = !_showLoginPassword;
               });
             },
+            isArabic: isArabic,
           ),
           const SizedBox(height: 10),
           Align(
-            alignment: Alignment.centerRight,
+            alignment: isArabic ? Alignment.centerLeft : Alignment.centerRight,
             child: TextButton(
               onPressed: () {
                 context.showAppNotice(
-                  title: 'Forgot password',
-                  message:
-                      'Password reset is not connected yet. Please contact the admin for now.',
+                  title: context.tr('Forgot password', 'نسيت كلمة المرور'),
+                  message: context.tr(
+                    'Password reset is not connected yet. Please contact the admin for now.',
+                    'إعادة تعيين كلمة المرور غير مربوطة بعد. تواصل مع الأدمن حاليًا.',
+                  ),
                   type: AppNoticeType.info,
                   duration: const Duration(seconds: 4),
                 );
               },
-              child: const Text(
-                'نسيت كلمة المرور؟',
-                style: TextStyle(
+              child: Text(
+                context.tr('Forgot password?', 'نسيت كلمة المرور؟'),
+                style: const TextStyle(
                   color: Color(0xFFEF8D3A),
                   fontWeight: FontWeight.w700,
                 ),
@@ -237,7 +249,7 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
           ),
           const SizedBox(height: 6),
           _PrimaryActionButton(
-            label: 'دخول',
+            label: context.tr('Login', 'دخول'),
             isLoading: session.isLoading,
             onPressed: _handleLogin,
           ),
@@ -247,9 +259,9 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
               session.continueAsGuest();
               Navigator.of(context).pushReplacementNamed(HomePage.routeName);
             },
-            child: const Text(
-              'الدخول كضيف',
-              style: TextStyle(
+            child: Text(
+              context.tr('Continue as Guest', 'الدخول كضيف'),
+              style: const TextStyle(
                 color: Color(0xFF2E7D1F),
                 fontWeight: FontWeight.w800,
               ),
@@ -260,24 +272,27 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildRegister(AppSessionController session) {
+  Widget _buildRegister(AppSessionController session, bool isArabic) {
     return SingleChildScrollView(
       child: Column(
         children: [
-          const Text(
-            'إنشاء حساب',
+          Text(
+            context.tr('Create Account', 'إنشاء حساب'),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 24,
               color: Color(0xFF2E7D1F),
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'أنشئ حسابك وابدأ التسوق بسهولة',
+          Text(
+            context.tr(
+              'Create your account and start shopping easily',
+              'أنشئ حسابك وابدأ التسوق بسهولة',
+            ),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF6B7968),
               fontWeight: FontWeight.w500,
@@ -288,19 +303,24 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
           const SizedBox(height: 16),
           _BrandInput(
             controller: _registerNameController,
-            hintText: 'الاسم الكامل',
+            hintText: context.tr('Full name', 'الاسم الكامل'),
             prefixIcon: Icons.person_outline_rounded,
+            isArabic: isArabic,
           ),
           const SizedBox(height: 14),
           _BrandInput(
             controller: _registerIdentifierController,
-            hintText: 'رقم الهاتف أو البريد الإلكتروني',
+            hintText: context.tr(
+              'Phone number or email',
+              'رقم الهاتف أو البريد الإلكتروني',
+            ),
             prefixIcon: Icons.phone_android_rounded,
+            isArabic: isArabic,
           ),
           const SizedBox(height: 14),
           _BrandInput(
             controller: _registerPasswordController,
-            hintText: 'كلمة المرور',
+            hintText: context.tr('Password', 'كلمة المرور'),
             prefixIcon: Icons.lock_outline_rounded,
             obscureText: !_showRegisterPassword,
             suffixIcon: _showRegisterPassword
@@ -311,11 +331,12 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                 _showRegisterPassword = !_showRegisterPassword;
               });
             },
+            isArabic: isArabic,
           ),
           const SizedBox(height: 14),
           _BrandInput(
             controller: _registerConfirmController,
-            hintText: 'تأكيد كلمة المرور',
+            hintText: context.tr('Confirm password', 'تأكيد كلمة المرور'),
             prefixIcon: Icons.lock_reset_rounded,
             obscureText: !_showRegisterConfirm,
             suffixIcon: _showRegisterConfirm
@@ -326,10 +347,11 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                 _showRegisterConfirm = !_showRegisterConfirm;
               });
             },
+            isArabic: isArabic,
           ),
           const SizedBox(height: 18),
           _PrimaryActionButton(
-            label: 'إنشاء حساب',
+            label: context.tr('Create Account', 'إنشاء حساب'),
             isLoading: session.isLoading,
             onPressed: _handleRegister,
           ),
@@ -354,15 +376,21 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
       if (!context.mounted) {
         return;
       }
-      context.showHandledError(error, fallbackTitle: 'Login failed');
+      context.showHandledError(
+        error,
+        fallbackTitle: context.tr('Login failed', 'فشل تسجيل الدخول'),
+      );
     }
   }
 
   Future<void> _handleRegister() async {
     if (_registerPasswordController.text != _registerConfirmController.text) {
       context.showAppNotice(
-        title: 'Password mismatch',
-        message: 'Please make sure both password fields are the same.',
+        title: context.tr('Password mismatch', 'كلمتا المرور غير متطابقتين'),
+        message: context.tr(
+          'Please make sure both password fields are the same.',
+          'تأكد من تطابق حقلي كلمة المرور.',
+        ),
         type: AppNoticeType.warning,
       );
       return;
@@ -383,7 +411,10 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
       if (!context.mounted) {
         return;
       }
-      context.showHandledError(error, fallbackTitle: 'Create account failed');
+      context.showHandledError(
+        error,
+        fallbackTitle: context.tr('Create account failed', 'فشل إنشاء الحساب'),
+      );
     }
   }
 
@@ -403,6 +434,7 @@ class _BrandInput extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.prefixIcon,
+    required this.isArabic,
     this.obscureText = false,
     this.suffixIcon,
     this.onSuffixTap,
@@ -414,16 +446,17 @@ class _BrandInput extends StatelessWidget {
   final bool obscureText;
   final IconData? suffixIcon;
   final VoidCallback? onSuffixTap;
+  final bool isArabic;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
-      textAlign: TextAlign.right,
+      textAlign: isArabic ? TextAlign.right : TextAlign.left,
       decoration: InputDecoration(
         hintText: hintText,
-        hintTextDirection: TextDirection.rtl,
+        hintTextDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
         filled: true,
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -458,9 +491,7 @@ class _BrandInput extends StatelessWidget {
 }
 
 class _TopLogo extends StatelessWidget {
-  const _TopLogo({
-    required this.height,
-  });
+  const _TopLogo({required this.height});
 
   final double height;
 
@@ -468,10 +499,10 @@ class _TopLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
-          child: Image.asset(
-            'assets/images/fattoush_wordmark.png',
-            fit: BoxFit.contain,
-          ),
+      child: Image.asset(
+        'assets/images/fattoush_wordmark.png',
+        fit: BoxFit.contain,
+      ),
     );
   }
 }

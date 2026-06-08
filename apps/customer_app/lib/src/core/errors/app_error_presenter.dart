@@ -31,7 +31,16 @@ class AppErrorPresenter {
     if (error is SocketException) {
       return const AppErrorPresentation(
         title: 'No connection',
-        message: 'Please check your internet or server connection and try again.',
+        message:
+            'Please check your internet or server connection and try again.',
+      );
+    }
+
+    if (error is ApiConnectionException) {
+      return const AppErrorPresentation(
+        title: 'Server not reachable',
+        message:
+            'We cannot reach backend. Make sure server is running and phone + backend ports match.',
       );
     }
 
@@ -68,14 +77,16 @@ class AppErrorPresenter {
       );
     }
 
-    if (error.statusCode == 400 && message.contains('email or phone is required')) {
+    if (error.statusCode == 400 &&
+        message.contains('email or phone is required')) {
       return const AppErrorPresentation(
         title: 'Missing information',
         message: 'Please enter your email or phone number first.',
       );
     }
 
-    if (error.statusCode == 400 && message.contains('one or more products are invalid')) {
+    if (error.statusCode == 400 &&
+        message.contains('one or more products are invalid')) {
       return const AppErrorPresentation(
         title: 'Product unavailable',
         message: 'One of the selected products is no longer available.',

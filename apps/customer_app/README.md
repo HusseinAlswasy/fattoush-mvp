@@ -26,9 +26,10 @@ flutter pub get
 
 2. Make sure the backend is running.
 
-3. If using a real Android device over USB, map the backend port:
+3. If using a real Android device over USB, map backend ports:
 
 ```powershell
+adb reverse tcp:3001 tcp:3001
 adb reverse tcp:3000 tcp:3000
 ```
 

@@ -55,6 +55,7 @@ model User {
   phone              String?          @unique
   passwordHash       String
   favorites          Favorite[]
+  productRatings     ProductRating[]
   customerOrders     Order[]          @relation("CustomerOrders")
   assignedOrders     Order[]          @relation("AssignedDriver")
   driverLocations    DriverLocation[]
@@ -71,6 +72,7 @@ model Product {
   imageUrl    String?
   isActive    Boolean     @default(true)
   favorites   Favorite[]
+  ratings     ProductRating[]
   orderItems  OrderItem[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -104,8 +106,25 @@ model Order {
   assignedDriver   User?          @relation("AssignedDriver", fields: [assignedDriverId], references: [id])
   items            OrderItem[]
   payments         Payment[]
+  ratings          ProductRating[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+}
+
+model ProductRating {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  orderId   String
+  rating    Int
+  comment   String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId, orderId])
 }
 
 model OrderItem {

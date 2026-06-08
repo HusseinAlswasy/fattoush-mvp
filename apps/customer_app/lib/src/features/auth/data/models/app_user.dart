@@ -19,6 +19,22 @@ class AppUser {
   final String? email;
   final String? phone;
 
+  AppUser copyWith({
+    String? id,
+    AppUserRole? role,
+    String? name,
+    String? email,
+    String? phone,
+  }) {
+    return AppUser(
+      id: id ?? this.id,
+      role: role ?? this.role,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+    );
+  }
+
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
       id: json['id'] as String,

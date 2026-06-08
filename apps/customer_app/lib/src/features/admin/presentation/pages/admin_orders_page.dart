@@ -1,7 +1,9 @@
 import 'package:customer_app/src/core/errors/app_error_presenter.dart';
+import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/admin/data/services/admin_api_service.dart';
+import 'package:customer_app/src/features/admin/presentation/widgets/admin_bottom_nav.dart';
 import 'package:flutter/material.dart';
 
 class AdminOrdersPage extends StatefulWidget {
@@ -21,10 +23,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_didBootstrap) {
-      return;
-    }
-
+    if (_didBootstrap) return;
     _didBootstrap = true;
     _future = _load();
   }
@@ -52,23 +51,23 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         orderId: orderId,
         status: status,
       );
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       await _refresh();
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       context.showAppNotice(
-        title: 'Order updated',
-        message: 'Order status changed to $status.',
+        title: context.tr('Order updated', 'تم تحديث الطلب'),
+        message: context.tr(
+          'Order status changed to $status.',
+          'تم تغيير حالة الطلب إلى $status.',
+        ),
         type: AppNoticeType.success,
       );
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      context.showHandledError(error, fallbackTitle: 'Order update failed');
+      if (!mounted) return;
+      context.showHandledError(
+        error,
+        fallbackTitle: context.tr('Order update failed', 'فشل تحديث الطلب'),
+      );
     }
   }
 
@@ -80,14 +79,15 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
 
     try {
       final drivers = await _adminApiService.getDrivers(session.accessToken!);
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       if (drivers.isEmpty) {
         context.showAppNotice(
-          title: 'No drivers',
-          message: 'Add a driver account first, then try assigning again.',
+          title: context.tr('No drivers', 'لا يوجد سائقون'),
+          message: context.tr(
+            'Add a driver account first, then try assigning again.',
+            'أضف حساب سائق أولًا ثم حاول الإسناد مرة أخرى.',
+          ),
           type: AppNoticeType.warning,
         );
         return;
@@ -100,9 +100,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         builder: (context) => _AssignDriverSheet(drivers: drivers),
       );
 
-      if (selectedDriver == null || !mounted) {
-        return;
-      }
+      if (selectedDriver == null || !mounted) return;
 
       await _adminApiService.assignDriver(
         token: session.accessToken!,
@@ -118,40 +116,42 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         );
       }
 
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       await _refresh();
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       final label = selectedDriver['name'] ?? selectedDriver['email'] ?? 'driver';
       context.showAppNotice(
-        title: 'Driver assigned',
-        message: '$label has been assigned to this order.',
+        title: context.tr('Driver assigned', 'تم إسناد السائق'),
+        message: context.tr(
+          '$label has been assigned to this order.',
+          'تم إسناد $label لهذا الطلب.',
+        ),
         type: AppNoticeType.success,
       );
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      context.showHandledError(error, fallbackTitle: 'Driver assignment failed');
+      if (!mounted) return;
+      context.showHandledError(
+        error,
+        fallbackTitle: context.tr('Driver assignment failed', 'فشل إسناد السائق'),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: const Color(0xFFF6F7FB),
+      bottomNavigationBar: const AdminBottomNav(
+        currentTab: AdminBottomNavTab.orders,
+      ),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FB),
-        surfaceTintColor: const Color(0xFFF4F6FB),
-        title: const Text(
-          'Admin Orders',
-          style: TextStyle(
-            color: Color(0xFF4A4E61),
+        backgroundColor: const Color(0xFFF6F7FB),
+        surfaceTintColor: const Color(0xFFF6F7FB),
+        title: Text(
+          context.tr('Admin Orders', 'طلبات الأدمن'),
+          style: const TextStyle(
+            color: Color(0xFF111827),
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -174,14 +174,14 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                       Text(
                         AppErrorPresenter.present(
                           snapshot.error ?? Exception('Unknown error'),
-                          fallbackTitle: 'Orders failed',
+                          fallbackTitle: context.tr('Orders failed', 'فشل الطلبات'),
                         ).message,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: _refresh,
-                        child: const Text('Retry'),
+                        child: Text(context.tr('Retry', 'إعادة المحاولة')),
                       ),
                     ],
                   ),
@@ -195,18 +195,18 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                 onRefresh: _refresh,
                 child: ListView(
                   padding: const EdgeInsets.all(24),
-                  children: const [
-                    SizedBox(height: 140),
-                    Icon(
+                  children: [
+                    const SizedBox(height: 140),
+                    const Icon(
                       Icons.receipt_long_outlined,
                       size: 68,
                       color: Color(0xFFB5BDD0),
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Text(
-                      'No orders yet',
+                      context.tr('No orders yet', 'لا توجد طلبات الآن'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF4A4E61),
@@ -275,10 +275,10 @@ class _OrderAdminCard extends StatelessWidget {
     final status = order['status'] as String? ?? 'PENDING';
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,7 +302,7 @@ class _OrderAdminCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text('Customer: ${user?['name'] ?? user?['email'] ?? 'Unknown'}'),
           Text(
             'Driver: ${assignedDriver?['name'] ?? assignedDriver?['email'] ?? 'Not assigned'}',
@@ -337,7 +337,9 @@ class _OrderAdminCard extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      isAssignButton ? 'ASSIGN DRIVER' : candidate.replaceAll('_', ' '),
+                      isAssignButton
+                          ? context.tr('ASSIGN DRIVER', 'إسناد سائق')
+                          : candidate.replaceAll('_', ' '),
                     ),
                   ),
                 );
@@ -388,9 +390,9 @@ class _AssignDriverSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Choose a driver',
-              style: TextStyle(
+            Text(
+              context.tr('Choose a driver', 'اختر سائقًا'),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF4A4E61),
@@ -404,13 +406,11 @@ class _AssignDriverSheet extends StatelessWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final driver = drivers[index];
-                  final title =
-                      driver['name'] as String? ??
+                  final title = driver['name'] as String? ??
                       driver['email'] as String? ??
                       driver['phone'] as String? ??
                       'Driver';
-                  final subtitle =
-                      driver['phone'] as String? ??
+                  final subtitle = driver['phone'] as String? ??
                       driver['email'] as String? ??
                       'Available driver';
 

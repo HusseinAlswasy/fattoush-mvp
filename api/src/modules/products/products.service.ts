@@ -55,7 +55,11 @@ export class ProductsService {
 
   async deleteProduct(id: string) {
     await this.assertProductExists(id);
-    await this.prisma.product.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.favorite.deleteMany({ where: { productId: id } }),
+      this.prisma.orderItem.deleteMany({ where: { productId: id } }),
+      this.prisma.product.delete({ where: { id } }),
+    ]);
     return { success: true };
   }
 

@@ -1,4 +1,5 @@
 import 'package:customer_app/src/core/layout/app_responsive.dart';
+import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_bottom_nav.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
@@ -16,16 +17,17 @@ class CartPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cart = AppScope.cartOf(context);
+    final preferences = AppScope.preferencesOf(context);
     final isSmallPhone = context.isSmallPhone;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
       bottomNavigationBar: const AppBottomNav(
-        currentTab: AppBottomNavTab.orders,
+        currentTab: AppBottomNavTab.cart,
       ),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: cart,
+          listenable: Listenable.merge([cart, preferences]),
           builder: (context, _) {
             if (cart.items.isEmpty) {
               return const _EmptyCartState();
@@ -37,7 +39,7 @@ class CartPage extends StatelessWidget {
                 const _TopHeader(),
                 SizedBox(height: isSmallPhone ? 14 : 18),
                 Text(
-                  'Orders',
+                  context.tr('Orders', 'الطلبات'),
                   style: TextStyle(
                     fontSize: isSmallPhone ? 23 : 26,
                     fontWeight: FontWeight.w800,
@@ -69,15 +71,21 @@ class CartPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _SummaryRow(label: 'Order total', value: cart.subtotal),
+                      _SummaryRow(
+                        label: context.tr('Order total', 'إجمالي الطلب'),
+                        value: cart.subtotal,
+                      ),
                       const SizedBox(height: 6),
-                      _SummaryRow(label: 'Delivery', value: cart.deliveryFee),
+                      _SummaryRow(
+                        label: context.tr('Delivery', 'التوصيل'),
+                        value: cart.deliveryFee,
+                      ),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: Divider(height: 1, color: Color(0xFFE6E9F0)),
                       ),
                       _SummaryRow(
-                        label: 'Total',
+                        label: context.tr('Total', 'الإجمالي'),
                         value: cart.total,
                         emphasize: true,
                       ),
@@ -90,8 +98,10 @@ class CartPage extends StatelessWidget {
                             if (!session.isAuthenticated || session.isGuest) {
                               context.showAppNotice(
                                 title: 'Login required',
-                                message:
-                                    'Please login or create a customer account before checkout.',
+                                message: context.tr(
+                                  'Please login or create a customer account before checkout.',
+                                  'من فضلك سجّل الدخول أو أنشئ حساب عميل قبل إكمال الطلب.',
+                                ),
                                 type: AppNoticeType.info,
                               );
                               Navigator.of(context).pushNamed(AuthPage.routeName);
