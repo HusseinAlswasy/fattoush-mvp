@@ -12,6 +12,7 @@ Thumbs.db
 api/node_modules/
 api/dist/
 api/.env
+api/.env.*
 api/*.log
 api/backend*.log
 api/uploads/
@@ -32,3 +33,5 @@ apps/customer_app/ios/Flutter/.last_build_id
 # Generated / cache
 **/coverage/
 **/.turbo/
+
+.vercel
