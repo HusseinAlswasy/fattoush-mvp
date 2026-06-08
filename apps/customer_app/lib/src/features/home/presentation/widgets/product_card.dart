@@ -1,3 +1,4 @@
+import 'package:customer_app/src/core/widgets/product_image_view.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:flutter/material.dart';
 
@@ -45,21 +46,12 @@ class ProductCard extends StatelessWidget {
                     child: Container(
                       width: double.infinity,
                       color: const Color(0xFF202A37),
-                      child: product.imageUrl == null || product.imageUrl!.isEmpty
-                          ? const Icon(
-                              Icons.image_not_supported_outlined,
-                              size: 40,
-                              color: Colors.white70,
-                            )
-                          : Image.network(
-                              product.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => const Icon(
-                                Icons.broken_image_outlined,
-                                size: 40,
-                                color: Colors.white70,
-                              ),
-                            ),
+                      child: ProductImageView(
+                        imageUrl: product.imageUrl,
+                        fallbackIcon: Icons.image_not_supported_outlined,
+                        fallbackIconColor: Colors.white70,
+                        fallbackBackground: const Color(0xFF202A37),
+                      ),
                     ),
                   ),
                 ),
@@ -92,7 +84,7 @@ class ProductCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'AED ${product.price.toStringAsFixed(2)}',
+                        'EGP ${product.price.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: isSmallPhone ? 13 : 15,
                           fontWeight: FontWeight.w800,

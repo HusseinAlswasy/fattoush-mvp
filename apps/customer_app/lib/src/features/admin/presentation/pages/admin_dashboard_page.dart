@@ -2,6 +2,7 @@ import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
+import 'package:customer_app/src/core/widgets/product_image_view.dart';
 import 'package:customer_app/src/features/admin/data/services/admin_api_service.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_orders_page.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_settings_page.dart';
@@ -443,9 +444,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   width: double.infinity,
                   color: const Color(0xFFF3F5FA),
                   child: product.imageUrl?.isNotEmpty == true
-                      ? _AdminDashboardProductImage(
-                          imageUrl: product.imageUrl!,
-                        )
+                      ? ProductImageView(imageUrl: product.imageUrl!)
                       : const Icon(Icons.image_outlined, size: 42),
                 ),
               ),
@@ -941,7 +940,7 @@ class _ProductAdminCard extends StatelessWidget {
               height: 108,
               color: const Color(0xFFF3F5FA),
               child: product.imageUrl?.isNotEmpty == true
-                  ? _AdminDashboardProductImage(imageUrl: product.imageUrl!)
+                  ? ProductImageView(imageUrl: product.imageUrl!)
                   : const Icon(Icons.image_outlined),
             ),
           ),
@@ -975,33 +974,6 @@ class _MiniActionButton extends StatelessWidget {
         ),
         child: Icon(icon, size: 18, color: const Color(0xFF374151)),
       ),
-    );
-  }
-}
-
-class _AdminDashboardProductImage extends StatelessWidget {
-  const _AdminDashboardProductImage({required this.imageUrl});
-
-  final String imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    if (imageUrl.startsWith('data:image')) {
-      try {
-        return Image.memory(
-          UriData.parse(imageUrl).contentAsBytes(),
-          fit: BoxFit.cover,
-        );
-      } catch (_) {
-        return const Icon(Icons.broken_image_outlined);
-      }
-    }
-
-    return Image.network(
-      imageUrl,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) =>
-          const Icon(Icons.broken_image_outlined),
     );
   }
 }

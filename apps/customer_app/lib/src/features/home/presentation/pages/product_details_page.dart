@@ -1,5 +1,6 @@
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
+import 'package:customer_app/src/core/widgets/product_image_view.dart';
 import 'package:customer_app/src/features/cart/presentation/pages/cart_page.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:flutter/material.dart';
@@ -304,43 +305,12 @@ class _ProductHeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl == null || imageUrl!.trim().isEmpty) {
-      return const Center(
-        child: Icon(
-          Icons.image_not_supported_outlined,
-          size: 60,
-          color: Color(0xFF8A7151),
-        ),
-      );
-    }
-
-    if (imageUrl!.startsWith('data:image')) {
-      try {
-        return Image.memory(
-          UriData.parse(imageUrl!).contentAsBytes(),
-          fit: BoxFit.cover,
-        );
-      } catch (_) {
-        return const Center(
-          child: Icon(
-            Icons.broken_image_outlined,
-            size: 60,
-            color: Color(0xFF8A7151),
-          ),
-        );
-      }
-    }
-
-    return Image.network(
-      imageUrl!,
+    return ProductImageView(
+      imageUrl: imageUrl,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => const Center(
-        child: Icon(
-          Icons.broken_image_outlined,
-          size: 60,
-          color: Color(0xFF8A7151),
-        ),
-      ),
+      fallbackIcon: Icons.image_not_supported_outlined,
+      fallbackIconColor: const Color(0xFF8A7151),
+      fallbackBackground: const Color(0xFFF6EDE7),
     );
   }
 }

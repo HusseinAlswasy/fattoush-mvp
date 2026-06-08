@@ -3,6 +3,7 @@ import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_bottom_nav.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
+import 'package:customer_app/src/core/widgets/product_image_view.dart';
 import 'package:customer_app/src/features/auth/presentation/pages/auth_page.dart';
 import 'package:customer_app/src/features/cart/data/models/cart_item.dart';
 import 'package:customer_app/src/features/checkout/presentation/pages/delivery_address_page.dart';
@@ -263,14 +264,12 @@ class _CartItemCard extends StatelessWidget {
                   width: isSmallPhone ? 58 : 66,
                   height: isSmallPhone ? 58 : 66,
                   color: const Color(0xFFF1E6D8),
-                  child: item.product.imageUrl == null || item.product.imageUrl!.isEmpty
-                      ? const Icon(Icons.image_not_supported_outlined)
-                      : Image.network(
-                          item.product.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              const Icon(Icons.broken_image_outlined),
-                        ),
+                  child: ProductImageView(
+                    imageUrl: item.product.imageUrl,
+                    fallbackIcon: Icons.image_not_supported_outlined,
+                    fallbackIconColor: const Color(0xFF8A7151),
+                    fallbackBackground: const Color(0xFFF1E6D8),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

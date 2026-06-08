@@ -1,6 +1,7 @@
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_bottom_nav.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
+import 'package:customer_app/src/core/widgets/product_image_view.dart';
 import 'package:customer_app/src/features/cart/presentation/pages/cart_page.dart';
 import 'package:customer_app/src/features/home/data/models/home_data.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
@@ -754,46 +755,9 @@ class _NetworkProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl == null || imageUrl!.trim().isEmpty) {
-      return _ImageFallback(fit: fit);
-    }
-
-    if (imageUrl!.startsWith('data:image')) {
-      try {
-        final bytes = UriData.parse(imageUrl!).contentAsBytes();
-        return Image.memory(
-          bytes,
-          fit: fit,
-          errorBuilder: (context, error, stackTrace) => _ImageFallback(fit: fit),
-        );
-      } catch (_) {
-        return _ImageFallback(fit: fit);
-      }
-    }
-
-    return Image.network(
-      imageUrl!,
+    return ProductImageView(
+      imageUrl: imageUrl,
       fit: fit,
-      errorBuilder: (context, error, stackTrace) => _ImageFallback(fit: fit),
-    );
-  }
-}
-
-class _ImageFallback extends StatelessWidget {
-  const _ImageFallback({required this.fit});
-
-  final BoxFit fit;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFFFEEE8),
-      alignment: Alignment.center,
-      child: const Icon(
-        Icons.shopping_basket_rounded,
-        color: Color(0xFFFF5A52),
-        size: 42,
-      ),
     );
   }
 }
