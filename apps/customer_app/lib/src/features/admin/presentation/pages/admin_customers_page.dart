@@ -1,7 +1,9 @@
 import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
+import 'package:customer_app/src/core/widgets/app_back_home_button.dart';
 import 'package:customer_app/src/features/admin/data/services/admin_api_service.dart';
+import 'package:customer_app/src/features/admin/presentation/pages/admin_dashboard_page.dart';
 import 'package:customer_app/src/features/admin/presentation/widgets/admin_bottom_nav.dart';
 import 'package:flutter/material.dart';
 
@@ -49,6 +51,9 @@ class _AdminCustomersPageState extends State<AdminCustomersPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF6F7FB),
         surfaceTintColor: const Color(0xFFF6F7FB),
+        leading: const AppBackHomeButton(
+          homeRouteName: AdminDashboardPage.routeName,
+        ),
         title: Text(
           context.tr('Customers', 'العملاء'),
           style: const TextStyle(
@@ -75,8 +80,8 @@ class _AdminCustomersPageState extends State<AdminCustomersPage> {
                       Text(
                         AppErrorPresenter.present(
                           snapshot.error ?? Exception('Unknown error'),
-                          fallbackTitle:
-                              context.tr('Customers failed', 'فشل تحميل العملاء'),
+                          fallbackTitle: context.tr(
+                              'Customers failed', 'فشل تحميل العملاء'),
                         ).message,
                         textAlign: TextAlign.center,
                       ),
@@ -203,7 +208,8 @@ class _CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final count = (customer['_count'] as Map<String, dynamic>?)?['customerOrders'] ?? 0;
+    final count =
+        (customer['_count'] as Map<String, dynamic>?)?['customerOrders'] ?? 0;
     final name = customer['name'] as String? ??
         customer['email'] as String? ??
         customer['phone'] as String? ??

@@ -1,8 +1,10 @@
 import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
+import 'package:customer_app/src/core/widgets/app_back_home_button.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/admin/data/services/admin_api_service.dart';
+import 'package:customer_app/src/features/admin/presentation/pages/admin_dashboard_page.dart';
 import 'package:customer_app/src/features/admin/presentation/widgets/admin_bottom_nav.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:flutter/material.dart';
@@ -64,7 +66,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           title: Text(product.name),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -76,12 +79,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                   width: double.infinity,
                   color: const Color(0xFFF3F5FA),
                   child: product.imageUrl?.isNotEmpty == true
-                      ? Image.network(
-                          product.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              const Icon(Icons.broken_image_outlined),
-                        )
+                      ? _AdminProductImage(imageUrl: product.imageUrl!)
                       : const Icon(Icons.image_outlined, size: 42),
                 ),
               ),
@@ -262,6 +260,9 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF6F7FB),
         surfaceTintColor: const Color(0xFFF6F7FB),
+        leading: const AppBackHomeButton(
+          homeRouteName: AdminDashboardPage.routeName,
+        ),
         title: Text(
           context.tr('Products', 'المنتجات'),
           style: const TextStyle(
@@ -295,8 +296,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                       Text(
                         AppErrorPresenter.present(
                           snapshot.error ?? Exception('Unknown error'),
-                          fallbackTitle:
-                              context.tr('Products failed', 'فشل تحميل المنتجات'),
+                          fallbackTitle: context.tr(
+                              'Products failed', 'فشل تحميل المنتجات'),
                         ).message,
                         textAlign: TextAlign.center,
                       ),
@@ -392,8 +393,9 @@ class _ProductAdminCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel =
-        product.isActive ? context.tr('Live', 'مفعل') : context.tr('Hidden', 'مخفي');
+    final statusLabel = product.isActive
+        ? context.tr('Live', 'مفعل')
+        : context.tr('Hidden', 'مخفي');
     final statusColor =
         product.isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8);
 
@@ -478,12 +480,7 @@ class _ProductAdminCard extends StatelessWidget {
               height: 108,
               color: const Color(0xFFF3F5FA),
               child: product.imageUrl?.isNotEmpty == true
-                  ? Image.network(
-                      product.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          const Icon(Icons.broken_image_outlined),
-                    )
+                  ? _AdminProductImage(imageUrl: product.imageUrl!)
                   : const Icon(Icons.image_outlined),
             ),
           ),
@@ -517,6 +514,33 @@ class _MiniActionButton extends StatelessWidget {
         ),
         child: Icon(icon, size: 18, color: const Color(0xFF374151)),
       ),
+    );
+  }
+}
+
+class _AdminProductImage extends StatelessWidget {
+  const _AdminProductImage({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.startsWith('data:image')) {
+      try {
+        return Image.memory(
+          UriData.parse(imageUrl).contentAsBytes(),
+          fit: BoxFit.cover,
+        );
+      } catch (_) {
+        return const Icon(Icons.broken_image_outlined);
+      }
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          const Icon(Icons.broken_image_outlined),
     );
   }
 }
@@ -588,7 +612,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.product?.name ?? '');
     _priceController = TextEditingController(
-      text: widget.product == null ? '' : widget.product!.price.toStringAsFixed(2),
+      text: widget.product == null
+          ? ''
+          : widget.product!.price.toStringAsFixed(2),
     );
     _descriptionController =
         TextEditingController(text: widget.product?.description ?? '');
@@ -609,7 +635,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       final picked = await widget.imagePicker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 70,
       );
       if (picked == null || !mounted) return;
       setState(() => _selectedImage = picked);
@@ -694,7 +722,9 @@ class _ProductDialogState extends State<_ProductDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _DialogField(controller: _nameController, label: context.tr('Name', 'الاسم')),
+            _DialogField(
+                controller: _nameController,
+                label: context.tr('Name', 'الاسم')),
             _DialogDropdownField(
               label: context.tr('Category', 'التصنيف'),
               value: _selectedCategory,
@@ -709,7 +739,8 @@ class _ProductDialogState extends State<_ProductDialog> {
             _DialogField(
               controller: _priceController,
               label: context.tr('Price', 'السعر'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             _DialogField(
               controller: _descriptionController,
@@ -726,8 +757,10 @@ class _ProductDialogState extends State<_ProductDialog> {
                             'الصورة المختارة: ${_selectedImage!.name}',
                           )
                         : _imageUrl?.isNotEmpty == true
-                            ? context.tr('Current image ready', 'الصورة الحالية جاهزة')
-                            : context.tr('No image selected', 'لم يتم اختيار صورة'),
+                            ? context.tr(
+                                'Current image ready', 'الصورة الحالية جاهزة')
+                            : context.tr(
+                                'No image selected', 'لم يتم اختيار صورة'),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF7D859A),
@@ -744,7 +777,9 @@ class _ProductDialogState extends State<_ProductDialog> {
             const SizedBox(height: 8),
             SwitchListTile(
               value: _isActive,
-              onChanged: _isSaving ? null : (value) => setState(() => _isActive = value),
+              onChanged: _isSaving
+                  ? null
+                  : (value) => setState(() => _isActive = value),
               contentPadding: EdgeInsets.zero,
               title: Text(context.tr('Visible for customers', 'ظاهر للعملاء')),
             ),
@@ -766,9 +801,12 @@ class _ProductDialogState extends State<_ProductDialog> {
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
                 )
-              : Text(_isEditing ? context.tr('Save', 'حفظ') : context.tr('Create', 'إنشاء')),
+              : Text(_isEditing
+                  ? context.tr('Save', 'حفظ')
+                  : context.tr('Create', 'إنشاء')),
         ),
       ],
     );

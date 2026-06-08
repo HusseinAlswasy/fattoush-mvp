@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { AppModule } from './app.module';
@@ -15,6 +16,8 @@ export async function createNestApp() {
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.use(json({ limit: '12mb' }));
+  app.use(urlencoded({ extended: true, limit: '12mb' }));
   const isVercel = process.env.VERCEL === '1';
   const uploadsPath = join(process.cwd(), 'uploads');
   if (!isVercel) {

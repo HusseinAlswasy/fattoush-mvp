@@ -7,7 +7,6 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -15,9 +14,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { extname, join } from 'path';
-import type { Request } from 'express';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -55,21 +51,10 @@ export class ProductsController {
   @UseInterceptors(FileInterceptor('file'))
   @Post('admin/products/upload-image')
   uploadProductImage(
-    @UploadedFile() file: { originalname?: string; buffer: Buffer },
-    @Req() request: Request,
+    @UploadedFile() file: { mimetype?: string; buffer: Buffer },
   ) {
-    const uploadsPath = join(process.cwd(), 'uploads');
-    if (!existsSync(uploadsPath)) {
-      mkdirSync(uploadsPath, { recursive: true });
-    }
-
-    const extension = extname(file?.originalname ?? '') || '.jpg';
-    const fileName =
-      `product-${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`;
-    const filePath = join(uploadsPath, fileName);
-    writeFileSync(filePath, file.buffer);
-
-    const imageUrl = `${request.protocol}://${request.get('host')}/uploads/${fileName}`;
+    const mimeType = file?.mimetype || 'image/jpeg';
+    const imageUrl = `data:${mimeType};base64,${file.buffer.toString('base64')}`;
     return { imageUrl };
   }
 

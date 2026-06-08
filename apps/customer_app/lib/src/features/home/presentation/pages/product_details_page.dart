@@ -61,25 +61,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(28),
-                            child: product.imageUrl == null || product.imageUrl!.isEmpty
-                                ? const Center(
-                                    child: Icon(
-                                      Icons.image_not_supported_outlined,
-                                      size: 60,
-                                      color: Color(0xFF8A7151),
-                                    ),
-                                  )
-                                : Image.network(
-                                    product.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => const Center(
-                                      child: Icon(
-                                        Icons.broken_image_outlined,
-                                        size: 60,
-                                        color: Color(0xFF8A7151),
-                                      ),
-                                    ),
-                                  ),
+                            child: _ProductHeroImage(
+                              imageUrl: product.imageUrl,
+                            ),
                           ),
                         ),
                         Positioned(
@@ -167,36 +151,42 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               ],
                             ),
                             const SizedBox(height: 24),
-                            Row(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
-                                  'AED ${totalPrice.toStringAsFixed(2)}',
+                                  'EGP ${totalPrice.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w800,
                                     color: Color(0xFF64C27C),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
                                 Text(
-                                  'AED ${(product.price * (_quantity + 1)).toStringAsFixed(2)}',
+                                  'EGP ${(product.price * (_quantity + 1)).toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     decoration: TextDecoration.lineThrough,
-                                    fontSize: 18,
+                                    fontSize: 17,
                                     fontWeight: FontWeight.w700,
                                     color: Color(0xFFC3C7D5),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
                                 const Text(
                                   '/ 550 g',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 17,
                                     fontWeight: FontWeight.w700,
                                     color: Color(0xFF7A8094),
                                   ),
                                 ),
-                                const Spacer(),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
                                 _CircleButton(
                                   icon: Icons.remove,
                                   filled: true,
@@ -301,6 +291,54 @@ class _CircleButton extends StatelessWidget {
           icon,
           color: const Color(0xFF6A7085),
           size: 20,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductHeroImage extends StatelessWidget {
+  const _ProductHeroImage({required this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl == null || imageUrl!.trim().isEmpty) {
+      return const Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          size: 60,
+          color: Color(0xFF8A7151),
+        ),
+      );
+    }
+
+    if (imageUrl!.startsWith('data:image')) {
+      try {
+        return Image.memory(
+          UriData.parse(imageUrl!).contentAsBytes(),
+          fit: BoxFit.cover,
+        );
+      } catch (_) {
+        return const Center(
+          child: Icon(
+            Icons.broken_image_outlined,
+            size: 60,
+            color: Color(0xFF8A7151),
+          ),
+        );
+      }
+    }
+
+    return Image.network(
+      imageUrl!,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => const Center(
+        child: Icon(
+          Icons.broken_image_outlined,
+          size: 60,
+          color: Color(0xFF8A7151),
         ),
       ),
     );

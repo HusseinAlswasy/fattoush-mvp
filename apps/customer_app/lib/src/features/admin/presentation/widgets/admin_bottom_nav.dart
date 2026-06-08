@@ -92,7 +92,7 @@ class AdminBottomNav extends StatelessWidget {
       AdminBottomNavTab.settings => AdminSettingsPage.routeName,
     };
 
-    Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
+    Navigator.of(context).pushReplacementNamed(route);
   }
 }
 

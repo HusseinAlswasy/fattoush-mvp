@@ -443,11 +443,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   width: double.infinity,
                   color: const Color(0xFFF3F5FA),
                   child: product.imageUrl?.isNotEmpty == true
-                      ? Image.network(
-                          product.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              const Icon(Icons.broken_image_outlined),
+                      ? _AdminDashboardProductImage(
+                          imageUrl: product.imageUrl!,
                         )
                       : const Icon(Icons.image_outlined, size: 42),
                 ),
@@ -944,12 +941,7 @@ class _ProductAdminCard extends StatelessWidget {
               height: 108,
               color: const Color(0xFFF3F5FA),
               child: product.imageUrl?.isNotEmpty == true
-                  ? Image.network(
-                      product.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          const Icon(Icons.broken_image_outlined),
-                    )
+                  ? _AdminDashboardProductImage(imageUrl: product.imageUrl!)
                   : const Icon(Icons.image_outlined),
             ),
           ),
@@ -983,6 +975,33 @@ class _MiniActionButton extends StatelessWidget {
         ),
         child: Icon(icon, size: 18, color: const Color(0xFF374151)),
       ),
+    );
+  }
+}
+
+class _AdminDashboardProductImage extends StatelessWidget {
+  const _AdminDashboardProductImage({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.startsWith('data:image')) {
+      try {
+        return Image.memory(
+          UriData.parse(imageUrl).contentAsBytes(),
+          fit: BoxFit.cover,
+        );
+      } catch (_) {
+        return const Icon(Icons.broken_image_outlined);
+      }
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) =>
+          const Icon(Icons.broken_image_outlined),
     );
   }
 }
@@ -1111,7 +1130,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       final picked = await widget.imagePicker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 70,
       );
       if (picked == null || !mounted) return;
       setState(() => _selectedImage = picked);

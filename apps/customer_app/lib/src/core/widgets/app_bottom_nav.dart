@@ -102,7 +102,7 @@ class AppBottomNav extends StatelessWidget {
       AppBottomNavTab.profile => ProfilePage.routeName,
     };
 
-    Navigator.of(context).pushNamedAndRemoveUntil(routeName, (route) => false);
+    Navigator.of(context).pushReplacementNamed(routeName);
   }
 }
 
@@ -141,9 +141,8 @@ class _NavItem extends StatelessWidget {
                 width: prominent ? (compact ? 50 : 58) : 34,
                 height: prominent ? (compact ? 50 : 58) : 34,
                 decoration: BoxDecoration(
-                  color: prominent
-                      ? const Color(0xFFFF5A52)
-                      : Colors.transparent,
+                  color:
+                      prominent ? const Color(0xFFFF5A52) : Colors.transparent,
                   borderRadius: BorderRadius.circular(prominent ? 18 : 12),
                 ),
                 child: Icon(

@@ -1,8 +1,10 @@
 import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
+import 'package:customer_app/src/core/widgets/app_back_home_button.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/admin/data/services/admin_api_service.dart';
+import 'package:customer_app/src/features/admin/presentation/pages/admin_dashboard_page.dart';
 import 'package:customer_app/src/features/admin/presentation/widgets/admin_bottom_nav.dart';
 import 'package:flutter/material.dart';
 
@@ -120,7 +122,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       await _refresh();
       if (!mounted) return;
 
-      final label = selectedDriver['name'] ?? selectedDriver['email'] ?? 'driver';
+      final label =
+          selectedDriver['name'] ?? selectedDriver['email'] ?? 'driver';
       context.showAppNotice(
         title: context.tr('Driver assigned', 'تم إسناد السائق'),
         message: context.tr(
@@ -133,7 +136,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       if (!mounted) return;
       context.showHandledError(
         error,
-        fallbackTitle: context.tr('Driver assignment failed', 'فشل إسناد السائق'),
+        fallbackTitle:
+            context.tr('Driver assignment failed', 'فشل إسناد السائق'),
       );
     }
   }
@@ -148,6 +152,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF6F7FB),
         surfaceTintColor: const Color(0xFFF6F7FB),
+        leading: const AppBackHomeButton(
+          homeRouteName: AdminDashboardPage.routeName,
+        ),
         title: Text(
           context.tr('Admin Orders', 'طلبات الأدمن'),
           style: const TextStyle(
@@ -174,7 +181,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                       Text(
                         AppErrorPresenter.present(
                           snapshot.error ?? Exception('Unknown error'),
-                          fallbackTitle: context.tr('Orders failed', 'فشل الطلبات'),
+                          fallbackTitle:
+                              context.tr('Orders failed', 'فشل الطلبات'),
                         ).message,
                         textAlign: TextAlign.center,
                       ),
@@ -235,7 +243,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                     ),
                   );
                 },
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 10),
                 itemCount: orders.length,
               ),
             );
@@ -403,7 +412,8 @@ class _AssignDriverSheet extends StatelessWidget {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: drivers.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final driver = drivers[index];
                   final title = driver['name'] as String? ??
