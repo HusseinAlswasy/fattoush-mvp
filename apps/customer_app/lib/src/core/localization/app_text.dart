@@ -5,6 +5,17 @@ extension AppTextX on BuildContext {
   bool get isArabicText => AppScope.preferencesOf(this).isArabic;
 
   String tr(String english, String arabic) {
-    return isArabicText ? arabic : english;
+    if (!isArabicText || _looksCorrupted(arabic)) {
+      return english;
+    }
+
+    return arabic;
+  }
+
+  bool _looksCorrupted(String value) {
+    return value.contains('Ø') ||
+        value.contains('Ù') ||
+        value.contains('ð') ||
+        value.contains('Ÿ');
   }
 }

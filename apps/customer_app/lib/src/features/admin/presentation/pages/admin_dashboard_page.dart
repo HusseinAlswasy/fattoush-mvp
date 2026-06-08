@@ -1125,6 +1125,17 @@ class _ProductDialogState extends State<_ProductDialog> {
   }
 
   Future<void> _submit() async {
+    final name = _nameController.text.trim();
+    final price = double.tryParse(_priceController.text.trim());
+    if (name.isEmpty || price == null || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a product name and a valid price.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -1137,9 +1148,9 @@ class _ProductDialogState extends State<_ProductDialog> {
         await widget.adminApiService.updateProduct(
           token: widget.accessToken,
           productId: widget.product!.id,
-          name: _nameController.text.trim(),
+          name: name,
           category: _selectedCategory,
-          price: double.tryParse(_priceController.text.trim()) ?? 0,
+          price: price,
           description: _descriptionController.text.trim(),
           imageUrl: finalImageUrl,
           isActive: _isActive,
@@ -1147,9 +1158,9 @@ class _ProductDialogState extends State<_ProductDialog> {
       } else {
         await widget.adminApiService.createProduct(
           token: widget.accessToken,
-          name: _nameController.text.trim(),
+          name: name,
           category: _selectedCategory,
-          price: double.tryParse(_priceController.text.trim()) ?? 0,
+          price: price,
           description: _descriptionController.text.trim(),
           imageUrl: finalImageUrl,
           isActive: _isActive,
