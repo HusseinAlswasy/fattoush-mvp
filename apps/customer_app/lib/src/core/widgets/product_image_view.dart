@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 class ProductImageView extends StatelessWidget {
@@ -16,6 +18,9 @@ class ProductImageView extends StatelessWidget {
   final Color fallbackIconColor;
   final Color fallbackBackground;
 
+  static final Map<String, Uint8List> _dataUrlCache = <String, Uint8List>{};
+  static const int _maxCachedImages = 30;
+
   @override
   Widget build(BuildContext context) {
     final value = imageUrl?.trim();
@@ -29,8 +34,9 @@ class ProductImageView extends StatelessWidget {
 
     if (value.startsWith('data:')) {
       try {
+        final bytes = _readDataUrlBytes(value);
         return Image.memory(
-          UriData.parse(value).contentAsBytes(),
+          bytes,
           fit: fit,
           gaplessPlayback: true,
           errorBuilder: (context, error, stackTrace) => _FallbackImage(
@@ -58,6 +64,20 @@ class ProductImageView extends StatelessWidget {
         background: fallbackBackground,
       ),
     );
+  }
+
+  static Uint8List _readDataUrlBytes(String value) {
+    final cachedBytes = _dataUrlCache[value];
+    if (cachedBytes != null) {
+      return cachedBytes;
+    }
+
+    final bytes = UriData.parse(value).contentAsBytes();
+    if (_dataUrlCache.length >= _maxCachedImages) {
+      _dataUrlCache.remove(_dataUrlCache.keys.first);
+    }
+    _dataUrlCache[value] = bytes;
+    return bytes;
   }
 }
 

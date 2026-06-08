@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
+  static String? _healthyBaseUrl;
+
   final http.Client _client;
 
   Future<List<dynamic>> getList(
@@ -91,6 +93,32 @@ class ApiClient {
     _throwIfInvalid(response, path);
   }
 
+  Future<Map<String, dynamic>> uploadFile(
+    String path, {
+    required String fieldName,
+    required String filePath,
+    String? token,
+  }) async {
+    final response = await _executeRequest(
+      path,
+      sendRequest: (uri) async {
+        final request = http.MultipartRequest('POST', uri);
+        if (token != null && token.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $token';
+        }
+        request.files.add(
+          await http.MultipartFile.fromPath(fieldName, filePath),
+        );
+
+        final streamedResponse = await _client.send(request);
+        return http.Response.fromStream(streamedResponse);
+      },
+    );
+
+    _throwIfInvalid(response, path);
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   Uri _buildUri(
     String baseUrl,
     String path, {
@@ -117,7 +145,8 @@ class ApiClient {
     required Future<http.Response> Function(Uri uri) sendRequest,
   }) async {
     final errors = <String>[];
-    for (final baseUrl in AppConfig.apiBaseUrls) {
+    final baseUrls = _prioritizedBaseUrls();
+    for (final baseUrl in baseUrls) {
       try {
         final uri = _buildUri(
           baseUrl,
@@ -126,6 +155,7 @@ class ApiClient {
         );
         final response =
             await sendRequest(uri).timeout(const Duration(seconds: 12));
+        _healthyBaseUrl = baseUrl;
         return response;
       } on SocketException catch (error) {
         final endpoint = '$baseUrl$path';
@@ -137,9 +167,22 @@ class ApiClient {
 
     throw ApiConnectionException(
       message: 'No available backend endpoint.',
-      triedEndpoints: AppConfig.apiBaseUrls,
+      triedEndpoints: baseUrls,
       details: errors,
     );
+  }
+
+  List<String> _prioritizedBaseUrls() {
+    final configuredUrls = AppConfig.apiBaseUrls;
+    final healthyBaseUrl = _healthyBaseUrl;
+    if (healthyBaseUrl == null || !configuredUrls.contains(healthyBaseUrl)) {
+      return configuredUrls;
+    }
+
+    return [
+      healthyBaseUrl,
+      ...configuredUrls.where((url) => url != healthyBaseUrl),
+    ];
   }
 
   void _throwIfInvalid(http.Response response, String path) {

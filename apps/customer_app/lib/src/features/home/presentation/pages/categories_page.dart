@@ -77,7 +77,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
               final items = snapshot.data ?? <_CategoryListItem>[];
               return ListView.separated(
                 itemCount: items.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return InkWell(

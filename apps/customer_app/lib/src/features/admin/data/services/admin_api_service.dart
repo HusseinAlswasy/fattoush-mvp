@@ -1,17 +1,10 @@
-import 'dart:convert';
-
-import 'package:customer_app/src/core/config/app_config.dart';
 import 'package:customer_app/src/core/network/api_client.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
-import 'package:http/http.dart' as http;
 
 class AdminApiService {
-  AdminApiService({ApiClient? client, http.Client? httpClient})
-      : _client = client ?? ApiClient(),
-        _httpClient = httpClient ?? http.Client();
+  AdminApiService({ApiClient? client}) : _client = client ?? ApiClient();
 
   final ApiClient _client;
-  final http.Client _httpClient;
 
   Future<List<Product>> getProducts(String token) async {
     final response = await _client.getList('/admin/products', token: token);
@@ -47,24 +40,12 @@ class AdminApiService {
     required String token,
     required String imagePath,
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('${AppConfig.apiBaseUrl}/admin/products/upload-image'),
+    final payload = await _client.uploadFile(
+      '/admin/products/upload-image',
+      token: token,
+      fieldName: 'file',
+      filePath: imagePath,
     );
-    request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(await http.MultipartFile.fromPath('file', imagePath));
-
-    final streamed = await _httpClient.send(request);
-    final response = await http.Response.fromStream(streamed);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(
-        path: '/admin/products/upload-image',
-        statusCode: response.statusCode,
-        rawBody: response.body,
-      );
-    }
-
-    final payload = jsonDecode(response.body) as Map<String, dynamic>;
     return payload['imageUrl'] as String;
   }
 
