@@ -30,6 +30,11 @@ class AdminApiService {
     return response.cast<Map<String, dynamic>>();
   }
 
+  Future<List<Map<String, dynamic>>> getCustomers(String token) async {
+    final response = await _client.getList('/admin/customers', token: token);
+    return response.cast<Map<String, dynamic>>();
+  }
+
   Future<Map<String, dynamic>> getDailyReport(String token) {
     return _client.getObject('/admin/reports/daily', token: token);
   }
@@ -120,6 +125,16 @@ class AdminApiService {
       '/admin/products/$productId',
       token: token,
       body: body,
+    );
+  }
+
+  Future<void> deleteProduct({
+    required String token,
+    required String productId,
+  }) async {
+    await _client.delete(
+      '/admin/products/$productId',
+      token: token,
     );
   }
 

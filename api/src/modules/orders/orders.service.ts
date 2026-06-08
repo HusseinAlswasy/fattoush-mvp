@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { RateProductDto } from './dto/rate-product.dto';
 
 @Injectable()
 export class OrdersService {
@@ -105,6 +106,55 @@ export class OrdersService {
     return order;
   }
 
+  async rateProduct(
+    userId: string,
+    orderId: string,
+    productId: string,
+    dto: RateProductDto,
+  ) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, userId },
+      include: { items: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+
+    if (order.status !== OrderStatus.DELIVERED) {
+      throw new BadRequestException('You can rate products after delivery.');
+    }
+
+    const productWasOrdered = order.items.some(
+      (item) => item.productId === productId,
+    );
+
+    if (!productWasOrdered) {
+      throw new BadRequestException('This product is not part of the order.');
+    }
+
+    return this.prisma.productRating.upsert({
+      where: {
+        userId_productId_orderId: {
+          userId,
+          productId,
+          orderId,
+        },
+      },
+      update: {
+        rating: dto.rating,
+        comment: dto.comment?.trim() || null,
+      },
+      create: {
+        userId,
+        productId,
+        orderId,
+        rating: dto.rating,
+        comment: dto.comment?.trim() || null,
+      },
+    });
+  }
+
   async assignDriver(orderId: string, driverId: string) {
     const order = await this.findOrderById(orderId);
     await this.prisma.user.findFirstOrThrow({
@@ -142,6 +192,25 @@ export class OrdersService {
         createdAt: true,
       },
       orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  getCustomers() {
+    return this.prisma.user.findMany({
+      where: { role: 'CUSTOMER' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        createdAt: true,
+        _count: {
+          select: {
+            customerOrders: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

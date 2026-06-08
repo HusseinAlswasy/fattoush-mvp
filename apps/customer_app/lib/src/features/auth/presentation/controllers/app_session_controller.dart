@@ -22,18 +22,25 @@ class AppSessionController extends ChangeNotifier {
   bool get isCustomer => _user?.role == AppUserRole.customer;
   bool get isDriver => _user?.role == AppUserRole.driver;
 
+  void updateUser(AppUser user) {
+    _user = user;
+    notifyListeners();
+  }
+
   Future<void> login({
     required String identifier,
     required String password,
   }) async {
     _setLoading(true);
     try {
-      final email = identifier.contains('@') ? identifier.trim() : null;
-      final phone = email == null ? identifier.trim() : null;
+      final cleanedIdentifier = identifier.trim();
+      final cleanedPassword = password.trim();
+      final email = cleanedIdentifier.contains('@') ? cleanedIdentifier : null;
+      final phone = email == null ? cleanedIdentifier : null;
       final result = await _authApiService.login(
         email: email,
         phone: phone,
-        password: password,
+        password: cleanedPassword,
       );
       _accessToken = result.accessToken;
       _user = result.user;
@@ -50,13 +57,15 @@ class AppSessionController extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      final email = identifier.contains('@') ? identifier.trim() : null;
-      final phone = email == null ? identifier.trim() : null;
+      final cleanedIdentifier = identifier.trim();
+      final cleanedPassword = password.trim();
+      final email = cleanedIdentifier.contains('@') ? cleanedIdentifier : null;
+      final phone = email == null ? cleanedIdentifier : null;
       final result = await _authApiService.register(
         name: name?.trim(),
         email: email,
         phone: phone,
-        password: password,
+        password: cleanedPassword,
       );
       _accessToken = result.accessToken;
       _user = result.user;

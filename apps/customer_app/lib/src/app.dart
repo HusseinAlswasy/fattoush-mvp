@@ -1,7 +1,11 @@
+import 'package:customer_app/src/core/state/app_preferences_controller.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/theme/app_theme.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_dashboard_page.dart';
+import 'package:customer_app/src/features/admin/presentation/pages/admin_customers_page.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_orders_page.dart';
+import 'package:customer_app/src/features/admin/presentation/pages/admin_products_page.dart';
+import 'package:customer_app/src/features/admin/presentation/pages/admin_settings_page.dart';
 import 'package:customer_app/src/features/auth/presentation/controllers/app_session_controller.dart';
 import 'package:customer_app/src/features/auth/presentation/pages/auth_page.dart';
 import 'package:customer_app/src/features/cart/presentation/controllers/cart_controller.dart';
@@ -27,20 +31,37 @@ class CustomerApp extends StatelessWidget {
   const CustomerApp({super.key});
 
   static final CartController _cartController = CartController();
+  static final AppPreferencesController _preferencesController =
+      AppPreferencesController();
   static final AppSessionController _sessionController = AppSessionController();
 
   @override
   Widget build(BuildContext context) {
     return AppScope(
       cartController: _cartController,
+      preferencesController: _preferencesController,
       sessionController: _sessionController,
-      child: MaterialApp(
-        title: 'Fattoush Customer',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        initialRoute: SplashPage.routeName,
-        onGenerateRoute: (settings) {
-          switch (settings.name) {
+      child: ListenableBuilder(
+        listenable: _preferencesController,
+        builder: (context, _) {
+          final isArabic = _preferencesController.isArabic;
+          return MaterialApp(
+            title: 'Fattoush Customer',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: _preferencesController.themeMode,
+            locale: Locale(isArabic ? 'ar' : 'en'),
+            builder: (context, child) {
+              return Directionality(
+                textDirection:
+                    isArabic ? TextDirection.rtl : TextDirection.ltr,
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
+            initialRoute: SplashPage.routeName,
+            onGenerateRoute: (settings) {
+              switch (settings.name) {
             case SplashPage.routeName:
               return MaterialPageRoute<void>(
                 builder: (_) => const SplashPage(),
@@ -64,6 +85,21 @@ class CustomerApp extends StatelessWidget {
             case AdminOrdersPage.routeName:
               return MaterialPageRoute<void>(
                 builder: (_) => const AdminOrdersPage(),
+                settings: settings,
+              );
+            case AdminProductsPage.routeName:
+              return MaterialPageRoute<void>(
+                builder: (_) => const AdminProductsPage(),
+                settings: settings,
+              );
+            case AdminCustomersPage.routeName:
+              return MaterialPageRoute<void>(
+                builder: (_) => const AdminCustomersPage(),
+                settings: settings,
+              );
+            case AdminSettingsPage.routeName:
+              return MaterialPageRoute<void>(
+                builder: (_) => const AdminSettingsPage(),
                 settings: settings,
               );
             case ProductDetailsPage.routeName:
@@ -136,7 +172,9 @@ class CustomerApp extends StatelessWidget {
                 builder: (_) => const SplashPage(),
                 settings: settings,
               );
-          }
+              }
+            },
+          );
         },
       ),
     );

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:customer_app/src/core/config/app_config.dart';
 import 'package:http/http.dart' as http;
@@ -13,9 +15,10 @@ class ApiClient {
     String? token,
     Map<String, String>? queryParameters,
   }) async {
-    final response = await _client.get(
-      _buildUri(path, queryParameters: queryParameters),
-      headers: _headers(token: token),
+    final response = await _executeRequest(
+      path,
+      queryParameters: queryParameters,
+      sendRequest: (uri) => _client.get(uri, headers: _headers(token: token)),
     );
 
     _throwIfInvalid(response, path);
@@ -27,9 +30,10 @@ class ApiClient {
     String? token,
     Map<String, String>? queryParameters,
   }) async {
-    final response = await _client.get(
-      _buildUri(path, queryParameters: queryParameters),
-      headers: _headers(token: token),
+    final response = await _executeRequest(
+      path,
+      queryParameters: queryParameters,
+      sendRequest: (uri) => _client.get(uri, headers: _headers(token: token)),
     );
 
     _throwIfInvalid(response, path);
@@ -41,10 +45,13 @@ class ApiClient {
     String? token,
     Map<String, dynamic>? body,
   }) async {
-    final response = await _client.post(
-      _buildUri(path),
-      headers: _headers(token: token),
-      body: jsonEncode(body ?? <String, dynamic>{}),
+    final response = await _executeRequest(
+      path,
+      sendRequest: (uri) => _client.post(
+        uri,
+        headers: _headers(token: token),
+        body: jsonEncode(body ?? <String, dynamic>{}),
+      ),
     );
 
     _throwIfInvalid(response, path);
@@ -56,10 +63,13 @@ class ApiClient {
     String? token,
     Map<String, dynamic>? body,
   }) async {
-    final response = await _client.put(
-      _buildUri(path),
-      headers: _headers(token: token),
-      body: jsonEncode(body ?? <String, dynamic>{}),
+    final response = await _executeRequest(
+      path,
+      sendRequest: (uri) => _client.put(
+        uri,
+        headers: _headers(token: token),
+        body: jsonEncode(body ?? <String, dynamic>{}),
+      ),
     );
 
     _throwIfInvalid(response, path);
@@ -70,19 +80,23 @@ class ApiClient {
     String path, {
     String? token,
   }) async {
-    final response = await _client.delete(
-      _buildUri(path),
-      headers: _headers(token: token),
+    final response = await _executeRequest(
+      path,
+      sendRequest: (uri) => _client.delete(
+        uri,
+        headers: _headers(token: token),
+      ),
     );
 
     _throwIfInvalid(response, path);
   }
 
   Uri _buildUri(
+    String baseUrl,
     String path, {
     Map<String, String>? queryParameters,
   }) {
-    final uri = Uri.parse('${AppConfig.apiBaseUrl}$path');
+    final uri = Uri.parse('$baseUrl$path');
     if (queryParameters == null || queryParameters.isEmpty) {
       return uri;
     }
@@ -95,6 +109,37 @@ class ApiClient {
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
+  }
+
+  Future<http.Response> _executeRequest(
+    String path, {
+    Map<String, String>? queryParameters,
+    required Future<http.Response> Function(Uri uri) sendRequest,
+  }) async {
+    final errors = <String>[];
+    for (final baseUrl in AppConfig.apiBaseUrls) {
+      try {
+        final uri = _buildUri(
+          baseUrl,
+          path,
+          queryParameters: queryParameters,
+        );
+        final response =
+            await sendRequest(uri).timeout(const Duration(seconds: 12));
+        return response;
+      } on SocketException catch (error) {
+        final endpoint = '$baseUrl$path';
+        errors.add('$endpoint => ${error.message}');
+      } on TimeoutException {
+        errors.add('$baseUrl$path => timeout after 12 seconds');
+      }
+    }
+
+    throw ApiConnectionException(
+      message: 'No available backend endpoint.',
+      triedEndpoints: AppConfig.apiBaseUrls,
+      details: errors,
+    );
   }
 
   void _throwIfInvalid(http.Response response, String path) {
@@ -142,4 +187,16 @@ class ApiException implements Exception {
   @override
   String toString() =>
       'Request failed for $path with status $statusCode: ${serverMessage ?? rawBody ?? ''}';
+}
+
+class ApiConnectionException implements Exception {
+  const ApiConnectionException({
+    required this.message,
+    required this.triedEndpoints,
+    required this.details,
+  });
+
+  final String message;
+  final List<String> triedEndpoints;
+  final List<String> details;
 }

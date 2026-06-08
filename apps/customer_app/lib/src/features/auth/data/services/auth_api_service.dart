@@ -47,4 +47,32 @@ class AuthApiService {
     final response = await _client.getObject('/auth/me', token: token);
     return AppUser.fromJson(response);
   }
+
+  Future<void> changePassword({
+    required String token,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _client.postObject(
+      '/auth/change-password',
+      token: token,
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+    );
+  }
+
+  Future<AppUser> updateProfile({
+    required String token,
+    String? name,
+  }) async {
+    final response = await _client.postObject(
+      '/auth/update-profile',
+      token: token,
+      body: name == null ? {} : {'name': name},
+    );
+
+    return AppUser.fromJson(response);
+  }
 }

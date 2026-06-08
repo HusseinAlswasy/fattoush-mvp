@@ -46,6 +46,7 @@ class CustomerOrder {
 class CustomerOrderItem {
   const CustomerOrderItem({
     required this.id,
+    required this.productId,
     required this.quantity,
     required this.lineTotal,
     required this.productName,
@@ -53,6 +54,7 @@ class CustomerOrderItem {
   });
 
   final String id;
+  final String productId;
   final int quantity;
   final double lineTotal;
   final String productName;
@@ -63,6 +65,8 @@ class CustomerOrderItem {
 
     return CustomerOrderItem(
       id: json['id'] as String? ?? '',
+      productId:
+          (json['productId'] as String?) ?? (product['id'] as String?) ?? '',
       quantity: json['quantity'] as int? ?? 0,
       lineTotal: double.tryParse(json['lineTotal'].toString()) ?? 0,
       productName: product['name'] as String? ?? 'Product',
