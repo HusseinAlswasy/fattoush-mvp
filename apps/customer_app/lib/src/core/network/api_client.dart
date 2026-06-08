@@ -49,6 +49,7 @@ class ApiClient {
   }) async {
     final response = await _executeRequest(
       path,
+      allowFallback: false,
       sendRequest: (uri) => _client.post(
         uri,
         headers: _headers(token: token),
@@ -67,6 +68,7 @@ class ApiClient {
   }) async {
     final response = await _executeRequest(
       path,
+      allowFallback: false,
       sendRequest: (uri) => _client.put(
         uri,
         headers: _headers(token: token),
@@ -84,6 +86,7 @@ class ApiClient {
   }) async {
     final response = await _executeRequest(
       path,
+      allowFallback: false,
       sendRequest: (uri) => _client.delete(
         uri,
         headers: _headers(token: token),
@@ -115,11 +118,14 @@ class ApiClient {
 
   Future<http.Response> _executeRequest(
     String path, {
+    bool allowFallback = true,
     Map<String, String>? queryParameters,
     required Future<http.Response> Function(Uri uri) sendRequest,
   }) async {
     final errors = <String>[];
-    final baseUrls = _prioritizedBaseUrls();
+    final baseUrls = allowFallback
+        ? _prioritizedBaseUrls()
+        : [_healthyBaseUrl ?? AppConfig.productionApiUrl];
     for (final baseUrl in baseUrls) {
       try {
         final uri = _buildUri(

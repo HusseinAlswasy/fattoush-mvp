@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/localization/app_text.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
@@ -610,9 +612,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       final picked = await widget.imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 760,
-        maxHeight: 760,
-        imageQuality: 55,
+        maxWidth: 420,
+        maxHeight: 420,
+        imageQuality: 35,
       );
       if (picked == null || !mounted) return;
       setState(() => _selectedImage = picked);
@@ -661,7 +663,7 @@ class _ProductDialogState extends State<_ProductDialog> {
           description: _descriptionController.text.trim(),
           imageUrl: finalImageUrl,
           isActive: _isActive,
-        );
+        ).timeout(const Duration(seconds: 14));
       } else {
         await widget.adminApiService.createProduct(
           token: widget.accessToken,
@@ -671,11 +673,27 @@ class _ProductDialogState extends State<_ProductDialog> {
           description: _descriptionController.text.trim(),
           imageUrl: finalImageUrl,
           isActive: _isActive,
-        );
+        ).timeout(const Duration(seconds: 14));
       }
 
       if (!mounted) return;
       Navigator.of(context).pop(const _ProductDialogResult(saved: true));
+    } on ProductImageTooLargeException {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image is too large. Please choose a smaller photo.'),
+        ),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Saving took too long. Please try a smaller image.'),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _isSaving = false);

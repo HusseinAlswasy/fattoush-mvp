@@ -5,10 +5,17 @@ import 'package:image_picker/image_picker.dart';
 class ProductImageDataUrl {
   const ProductImageDataUrl._();
 
+  static const int maxDataUrlLength = 350000;
+
   static Future<String> fromXFile(XFile image) async {
     final bytes = await image.readAsBytes();
     final mimeType = _mimeTypeFor(image);
-    return 'data:$mimeType;base64,${base64Encode(bytes)}';
+    final dataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+    if (dataUrl.length > maxDataUrlLength) {
+      throw const ProductImageTooLargeException();
+    }
+
+    return dataUrl;
   }
 
   static String _mimeTypeFor(XFile image) {
@@ -30,4 +37,8 @@ class ProductImageDataUrl {
 
     return 'image/jpeg';
   }
+}
+
+class ProductImageTooLargeException implements Exception {
+  const ProductImageTooLargeException();
 }
