@@ -15,9 +15,16 @@ export async function createNestApp() {
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const isVercel = process.env.VERCEL === '1';
   const uploadsPath = join(process.cwd(), 'uploads');
-  if (!existsSync(uploadsPath)) {
-    mkdirSync(uploadsPath, { recursive: true });
+  if (!isVercel) {
+    if (!existsSync(uploadsPath)) {
+      mkdirSync(uploadsPath, { recursive: true });
+    }
+
+    app.useStaticAssets(uploadsPath, {
+      prefix: '/uploads/',
+    });
   }
 
   const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
@@ -42,9 +49,6 @@ export async function createNestApp() {
       return callback(new Error('CORS origin is not allowed.'), false);
     },
     credentials: true,
-  });
-  app.useStaticAssets(uploadsPath, {
-    prefix: '/uploads/',
   });
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
