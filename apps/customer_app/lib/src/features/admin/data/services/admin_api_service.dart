@@ -36,19 +36,6 @@ class AdminApiService {
     return _client.getObject('/admin/reports/monthly', token: token);
   }
 
-  Future<String> uploadProductImage({
-    required String token,
-    required String imagePath,
-  }) async {
-    final payload = await _client.uploadFile(
-      '/admin/products/upload-image',
-      token: token,
-      fieldName: 'file',
-      filePath: imagePath,
-    );
-    return payload['imageUrl'] as String;
-  }
-
   Future<void> createProduct({
     required String token,
     required String name,

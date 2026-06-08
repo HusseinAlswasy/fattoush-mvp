@@ -7,6 +7,7 @@ import 'package:customer_app/src/features/admin/data/services/admin_api_service.
 import 'package:customer_app/src/features/admin/presentation/pages/admin_orders_page.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_settings_page.dart';
 import 'package:customer_app/src/features/admin/presentation/widgets/admin_bottom_nav.dart';
+import 'package:customer_app/src/features/admin/utils/product_image_data_url.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1102,9 +1103,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       final picked = await widget.imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 70,
+        maxWidth: 760,
+        maxHeight: 760,
+        imageQuality: 55,
       );
       if (picked == null || !mounted) return;
       setState(() => _selectedImage = picked);
@@ -1129,10 +1130,7 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       var finalImageUrl = _imageUrl;
       if (_selectedImage != null) {
-        finalImageUrl = await widget.adminApiService.uploadProductImage(
-          token: widget.accessToken,
-          imagePath: _selectedImage!.path,
-        );
+        finalImageUrl = await ProductImageDataUrl.fromXFile(_selectedImage!);
       }
 
       if (_isEditing) {

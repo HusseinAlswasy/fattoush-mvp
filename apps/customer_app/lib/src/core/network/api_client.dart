@@ -93,32 +93,6 @@ class ApiClient {
     _throwIfInvalid(response, path);
   }
 
-  Future<Map<String, dynamic>> uploadFile(
-    String path, {
-    required String fieldName,
-    required String filePath,
-    String? token,
-  }) async {
-    final response = await _executeRequest(
-      path,
-      sendRequest: (uri) async {
-        final request = http.MultipartRequest('POST', uri);
-        if (token != null && token.isNotEmpty) {
-          request.headers['Authorization'] = 'Bearer $token';
-        }
-        request.files.add(
-          await http.MultipartFile.fromPath(fieldName, filePath),
-        );
-
-        final streamedResponse = await _client.send(request);
-        return http.Response.fromStream(streamedResponse);
-      },
-    );
-
-    _throwIfInvalid(response, path);
-    return jsonDecode(response.body) as Map<String, dynamic>;
-  }
-
   Uri _buildUri(
     String baseUrl,
     String path, {
