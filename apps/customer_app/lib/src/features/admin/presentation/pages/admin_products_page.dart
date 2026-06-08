@@ -10,7 +10,6 @@ import 'package:customer_app/src/core/widgets/product_image_view.dart';
 import 'package:customer_app/src/features/admin/data/services/admin_api_service.dart';
 import 'package:customer_app/src/features/admin/presentation/pages/admin_dashboard_page.dart';
 import 'package:customer_app/src/features/admin/presentation/widgets/admin_bottom_nav.dart';
-import 'package:customer_app/src/features/admin/utils/product_image_data_url.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -580,7 +579,6 @@ class _ProductDialogState extends State<_ProductDialog> {
   late String _selectedCategory;
   late bool _isActive;
   String? _imageUrl;
-  String? _selectedImageDataUrl;
   XFile? _selectedImage;
   bool _isSaving = false;
 
@@ -619,28 +617,9 @@ class _ProductDialogState extends State<_ProductDialog> {
         imageQuality: 18,
       );
       if (picked == null || !mounted) return;
-      final dataUrl = await ProductImageDataUrl.fromXFile(
-        picked,
-      ).timeout(const Duration(seconds: 4));
-      if (!mounted) return;
       setState(() {
         _selectedImage = picked;
-        _selectedImageDataUrl = dataUrl;
       });
-    } on ProductImageTooLargeException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image is too large. Please choose a smaller photo.'),
-        ),
-      );
-    } on TimeoutException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image took too long to prepare. Try another photo.'),
-        ),
-      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -668,21 +647,20 @@ class _ProductDialogState extends State<_ProductDialog> {
       return;
     }
 
-    if (_selectedImage != null && _selectedImageDataUrl == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image is not ready yet. Please choose it again.'),
-        ),
-      );
-      return;
-    }
-
     setState(() => _isSaving = true);
 
     try {
-      final finalImageUrl = _selectedImageDataUrl ?? _imageUrl;
+      final selectedImage = _selectedImage;
 
       if (_isEditing) {
+        final finalImageUrl = selectedImage == null
+            ? _imageUrl
+            : await widget.adminApiService
+                .uploadProductImage(
+                  token: widget.accessToken,
+                  image: selectedImage,
+                )
+                .timeout(const Duration(seconds: 45));
         await widget.adminApiService
             .updateProduct(
               token: widget.accessToken,
@@ -696,35 +674,42 @@ class _ProductDialogState extends State<_ProductDialog> {
             )
             .timeout(const Duration(seconds: 25));
       } else {
-        await widget.adminApiService
-            .createProduct(
-              token: widget.accessToken,
-              name: name,
-              category: _selectedCategory,
-              price: price,
-              description: _descriptionController.text.trim(),
-              imageUrl: finalImageUrl,
-              isActive: _isActive,
-            )
-            .timeout(const Duration(seconds: 25));
+        if (selectedImage == null) {
+          await widget.adminApiService
+              .createProduct(
+                token: widget.accessToken,
+                name: name,
+                category: _selectedCategory,
+                price: price,
+                description: _descriptionController.text.trim(),
+                imageUrl: _imageUrl,
+                isActive: _isActive,
+              )
+              .timeout(const Duration(seconds: 25));
+        } else {
+          await widget.adminApiService
+              .createProductWithImage(
+                token: widget.accessToken,
+                name: name,
+                category: _selectedCategory,
+                price: price,
+                description: _descriptionController.text.trim(),
+                image: selectedImage,
+                isActive: _isActive,
+              )
+              .timeout(const Duration(seconds: 60));
+        }
       }
 
       if (!mounted) return;
       Navigator.of(context).pop(const _ProductDialogResult(saved: true));
-    } on ProductImageTooLargeException {
-      if (!mounted) return;
-      setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image is too large. Please choose a smaller photo.'),
-        ),
-      );
     } on TimeoutException {
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Saving took too long. Please try a smaller image.'),
+          content: Text(
+              'Saving took too long. Please check internet and try again.'),
         ),
       );
     } on ApiConnectionException {

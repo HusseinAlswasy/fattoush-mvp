@@ -80,6 +80,44 @@ class ApiClient {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> uploadFile(
+    String path, {
+    required String fieldName,
+    required List<int> bytes,
+    required String fileName,
+    String? token,
+    Map<String, String>? fields,
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
+    final response = await _executeRequest(
+      path,
+      allowFallback: false,
+      timeout: timeout,
+      sendRequest: (uri) async {
+        final request = http.MultipartRequest('POST', uri)
+          ..files.add(
+            http.MultipartFile.fromBytes(
+              fieldName,
+              bytes,
+              filename: fileName,
+            ),
+          );
+        if (fields != null && fields.isNotEmpty) {
+          request.fields.addAll(fields);
+        }
+        if (token != null && token.isNotEmpty) {
+          request.headers['Authorization'] = 'Bearer $token';
+        }
+
+        final streamedResponse = await _client.send(request).timeout(timeout);
+        return http.Response.fromStream(streamedResponse);
+      },
+    );
+
+    _throwIfInvalid(response, path);
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   Future<void> delete(
     String path, {
     String? token,
@@ -119,6 +157,7 @@ class ApiClient {
   Future<http.Response> _executeRequest(
     String path, {
     bool allowFallback = true,
+    Duration timeout = const Duration(seconds: 12),
     Map<String, String>? queryParameters,
     required Future<http.Response> Function(Uri uri) sendRequest,
   }) async {
@@ -132,15 +171,15 @@ class ApiClient {
           path,
           queryParameters: queryParameters,
         );
-        final response =
-            await sendRequest(uri).timeout(const Duration(seconds: 12));
+        final response = await sendRequest(uri).timeout(timeout);
         _healthyBaseUrl = baseUrl;
         return response;
       } on SocketException catch (error) {
         final endpoint = '$baseUrl$path';
         errors.add('$endpoint => ${error.message}');
       } on TimeoutException {
-        errors.add('$baseUrl$path => timeout after 12 seconds');
+        errors
+            .add('$baseUrl$path => timeout after ${timeout.inSeconds} seconds');
       }
     }
 

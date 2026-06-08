@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -54,9 +55,60 @@ export class ProductsController {
     @UploadedFile()
     file: { originalname?: string; mimetype?: string; buffer: Buffer },
   ) {
-    const mimeType = this.getImageMimeType(file?.mimetype, file?.originalname);
-    const imageUrl = `data:${mimeType};base64,${file.buffer.toString('base64')}`;
-    return { imageUrl };
+    return { imageUrl: this.toDataImageUrl(file) };
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  @Post('admin/products/with-image')
+  createProductWithImage(
+    @Body() body: Record<string, string | undefined>,
+    @UploadedFile()
+    file?: { originalname?: string; mimetype?: string; buffer: Buffer },
+  ) {
+    const name = body.name?.trim();
+    const price = Number(body.price);
+
+    if (!name) {
+      throw new BadRequestException('Product name is required.');
+    }
+
+    if (!Number.isFinite(price) || price < 0) {
+      throw new BadRequestException('Product price is invalid.');
+    }
+
+    return this.productsService.createProduct({
+      name,
+      category: body.category?.trim() || 'Other',
+      description: body.description?.trim() || undefined,
+      price,
+      imageUrl: file ? this.toDataImageUrl(file) : undefined,
+      isActive: this.parseBoolean(body.isActive, true),
+    });
+  }
+
+  private toDataImageUrl(file?: {
+    originalname?: string;
+    mimetype?: string;
+    buffer: Buffer;
+  }) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Image file is required.');
+    }
+
+    const mimeType = this.getImageMimeType(file.mimetype, file.originalname);
+    return `data:${mimeType};base64,${file.buffer.toString('base64')}`;
+  }
+
+  private parseBoolean(value: string | undefined, fallback: boolean) {
+    if (value === undefined) {
+      return fallback;
+    }
+
+    return value === 'true' || value === '1';
   }
 
   private getImageMimeType(mimeType?: string, fileName?: string) {

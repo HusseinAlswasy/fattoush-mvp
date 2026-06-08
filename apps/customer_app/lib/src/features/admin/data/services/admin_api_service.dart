@@ -1,5 +1,6 @@
 import 'package:customer_app/src/core/network/api_client.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AdminApiService {
   AdminApiService({ApiClient? client}) : _client = client ?? ApiClient();
@@ -34,6 +35,71 @@ class AdminApiService {
 
   Future<Map<String, dynamic>> getMonthlyReport(String token) {
     return _client.getObject('/admin/reports/monthly', token: token);
+  }
+
+  Future<String> uploadProductImage({
+    required String token,
+    required XFile image,
+  }) async {
+    final response = await _client.uploadFile(
+      '/admin/products/upload-image',
+      token: token,
+      fieldName: 'file',
+      bytes: await image.readAsBytes(),
+      fileName: image.name.isEmpty ? 'product-image.jpg' : image.name,
+    );
+    final imageUrl = response['imageUrl'];
+    if (imageUrl is String && imageUrl.isNotEmpty) {
+      return imageUrl;
+    }
+
+    throw ApiException(
+      path: '/admin/products/upload-image',
+      statusCode: 502,
+      serverMessage: 'Image upload did not return a usable URL.',
+    );
+  }
+
+  Future<void> createProductWithImage({
+    required String token,
+    required String name,
+    required String category,
+    required double price,
+    required bool isActive,
+    required XFile image,
+    String? description,
+  }) async {
+    try {
+      await _client.uploadFile(
+        '/admin/products/with-image',
+        token: token,
+        fieldName: 'file',
+        bytes: await image.readAsBytes(),
+        fileName: image.name.isEmpty ? 'product-image.jpg' : image.name,
+        fields: {
+          'name': name,
+          'category': category,
+          'price': price.toString(),
+          'description': description ?? '',
+          'isActive': isActive.toString(),
+        },
+      );
+    } on ApiException catch (error) {
+      if (error.statusCode != 404) {
+        rethrow;
+      }
+
+      final imageUrl = await uploadProductImage(token: token, image: image);
+      await createProduct(
+        token: token,
+        name: name,
+        category: category,
+        price: price,
+        description: description,
+        imageUrl: imageUrl,
+        isActive: isActive,
+      );
+    }
   }
 
   Future<void> createProduct({
