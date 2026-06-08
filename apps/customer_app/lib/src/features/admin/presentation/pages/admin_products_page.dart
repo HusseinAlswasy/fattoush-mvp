@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/localization/app_text.dart';
+import 'package:customer_app/src/core/network/api_client.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_back_home_button.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
@@ -579,6 +580,7 @@ class _ProductDialogState extends State<_ProductDialog> {
   late String _selectedCategory;
   late bool _isActive;
   String? _imageUrl;
+  String? _selectedImageDataUrl;
   XFile? _selectedImage;
   bool _isSaving = false;
 
@@ -612,12 +614,33 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       final picked = await widget.imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 420,
-        maxHeight: 420,
-        imageQuality: 35,
+        maxWidth: 96,
+        maxHeight: 96,
+        imageQuality: 18,
       );
       if (picked == null || !mounted) return;
-      setState(() => _selectedImage = picked);
+      final dataUrl = await ProductImageDataUrl.fromXFile(
+        picked,
+      ).timeout(const Duration(seconds: 4));
+      if (!mounted) return;
+      setState(() {
+        _selectedImage = picked;
+        _selectedImageDataUrl = dataUrl;
+      });
+    } on ProductImageTooLargeException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image is too large. Please choose a smaller photo.'),
+        ),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image took too long to prepare. Try another photo.'),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -648,32 +671,33 @@ class _ProductDialogState extends State<_ProductDialog> {
     setState(() => _isSaving = true);
 
     try {
-      var finalImageUrl = _imageUrl;
-      if (_selectedImage != null) {
-        finalImageUrl = await ProductImageDataUrl.fromXFile(_selectedImage!);
-      }
+      final finalImageUrl = _selectedImageDataUrl ?? _imageUrl;
 
       if (_isEditing) {
-        await widget.adminApiService.updateProduct(
-          token: widget.accessToken,
-          productId: widget.product!.id,
-          name: name,
-          category: _selectedCategory,
-          price: price,
-          description: _descriptionController.text.trim(),
-          imageUrl: finalImageUrl,
-          isActive: _isActive,
-        ).timeout(const Duration(seconds: 14));
+        await widget.adminApiService
+            .updateProduct(
+              token: widget.accessToken,
+              productId: widget.product!.id,
+              name: name,
+              category: _selectedCategory,
+              price: price,
+              description: _descriptionController.text.trim(),
+              imageUrl: finalImageUrl,
+              isActive: _isActive,
+            )
+            .timeout(const Duration(seconds: 25));
       } else {
-        await widget.adminApiService.createProduct(
-          token: widget.accessToken,
-          name: name,
-          category: _selectedCategory,
-          price: price,
-          description: _descriptionController.text.trim(),
-          imageUrl: finalImageUrl,
-          isActive: _isActive,
-        ).timeout(const Duration(seconds: 14));
+        await widget.adminApiService
+            .createProduct(
+              token: widget.accessToken,
+              name: name,
+              category: _selectedCategory,
+              price: price,
+              description: _descriptionController.text.trim(),
+              imageUrl: finalImageUrl,
+              isActive: _isActive,
+            )
+            .timeout(const Duration(seconds: 25));
       }
 
       if (!mounted) return;
@@ -693,6 +717,17 @@ class _ProductDialogState extends State<_ProductDialog> {
         const SnackBar(
           content: Text('Saving took too long. Please try a smaller image.'),
         ),
+      );
+    } on ApiConnectionException {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      context.showHandledError(
+        const ApiConnectionException(
+          message: 'No available backend endpoint.',
+          triedEndpoints: <String>[],
+          details: <String>[],
+        ),
+        fallbackTitle: 'Save failed',
       );
     } catch (error) {
       if (!mounted) return;

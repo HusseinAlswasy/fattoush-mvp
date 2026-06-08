@@ -123,9 +123,8 @@ class ApiClient {
     required Future<http.Response> Function(Uri uri) sendRequest,
   }) async {
     final errors = <String>[];
-    final baseUrls = allowFallback
-        ? _prioritizedBaseUrls()
-        : [_healthyBaseUrl ?? AppConfig.productionApiUrl];
+    final baseUrls =
+        allowFallback ? _prioritizedBaseUrls() : [AppConfig.productionApiUrl];
     for (final baseUrl in baseUrls) {
       try {
         final uri = _buildUri(

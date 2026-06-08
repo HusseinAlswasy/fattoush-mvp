@@ -38,9 +38,9 @@ class AppErrorPresenter {
 
     if (error is ApiConnectionException) {
       return const AppErrorPresentation(
-        title: 'Server not reachable',
+        title: 'Connection failed',
         message:
-            'We cannot reach backend. Make sure server is running and phone + backend ports match.',
+            'We could not reach the online API. Check internet and try again.',
       );
     }
 

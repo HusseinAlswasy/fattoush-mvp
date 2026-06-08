@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 class ProductImageDataUrl {
   const ProductImageDataUrl._();
 
-  static const int maxDataUrlLength = 350000;
+  static const int maxDataUrlLength = 180000;
 
   static Future<String> fromXFile(XFile image) async {
     final bytes = await image.readAsBytes();

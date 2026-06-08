@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:customer_app/src/core/errors/app_error_presenter.dart';
 import 'package:customer_app/src/core/localization/app_text.dart';
+import 'package:customer_app/src/core/network/api_client.dart';
 import 'package:customer_app/src/core/state/app_scope.dart';
 import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/core/widgets/product_image_view.dart';
@@ -123,9 +124,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 }
 
                 final data = snapshot.data!;
-                final totalOrders = (data.dailyReport['totalOrders'] ?? 0) as num;
-                final totalRevenue = (data.dailyReport['totalRevenue'] ?? 0) as num;
-                final hiddenCount = data.products.where((p) => !p.isActive).length;
+                final totalOrders =
+                    (data.dailyReport['totalOrders'] ?? 0) as num;
+                final totalRevenue =
+                    (data.dailyReport['totalRevenue'] ?? 0) as num;
+                final hiddenCount =
+                    data.products.where((p) => !p.isActive).length;
 
                 return RefreshIndicator(
                   onRefresh: _refresh,
@@ -188,7 +192,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             child: _SmallStatCard(
                               icon: Icons.shopping_bag_outlined,
                               count: '$totalOrders',
-                              title: context.tr('Orders today', 'الطلبات اليوم'),
+                              title:
+                                  context.tr('Orders today', 'الطلبات اليوم'),
                               accent: const Color(0xFF16A34A),
                             ),
                           ),
@@ -266,7 +271,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                         'عرض جميع الطلبات',
                                       ),
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.92),
+                                        color: Colors.white
+                                            .withValues(alpha: 0.92),
                                       ),
                                     ),
                                   ],
@@ -323,7 +329,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                context.tr('No products yet', 'لا توجد منتجات الآن'),
+                                context.tr(
+                                    'No products yet', 'لا توجد منتجات الآن'),
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -340,7 +347,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             child: _ProductAdminCard(
                               product: product,
                               onPreview: () => _showPreviewDialog(product),
-                              onEdit: () => _showProductDialog(product: product),
+                              onEdit: () =>
+                                  _showProductDialog(product: product),
                               onDelete: () => _confirmDeleteProduct(product),
                               onMore: () => _showProductActionSheet(product),
                             ),
@@ -435,7 +443,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           title: Text(product.name),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -859,8 +868,9 @@ class _ProductAdminCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel =
-        product.isActive ? context.tr('Live', 'مفعل') : context.tr('Hidden', 'مخفي');
+    final statusLabel = product.isActive
+        ? context.tr('Live', 'مفعل')
+        : context.tr('Hidden', 'مخفي');
     final statusColor =
         product.isActive ? const Color(0xFF16A34A) : const Color(0xFF94A3B8);
 
@@ -876,7 +886,8 @@ class _ProductAdminCard extends StatelessWidget {
             children: [
               InkWell(
                 onTap: onMore,
-                child: const Icon(Icons.more_vert_rounded, color: Color(0xFF6B7280)),
+                child: const Icon(Icons.more_vert_rounded,
+                    color: Color(0xFF6B7280)),
               ),
               const SizedBox(height: 22),
               _MiniActionButton(
@@ -1074,6 +1085,7 @@ class _ProductDialogState extends State<_ProductDialog> {
   late String _selectedCategory;
   late bool _isActive;
   String? _imageUrl;
+  String? _selectedImageDataUrl;
   XFile? _selectedImage;
   bool _isSaving = false;
 
@@ -1084,7 +1096,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.product?.name ?? '');
     _priceController = TextEditingController(
-      text: widget.product == null ? '' : widget.product!.price.toStringAsFixed(2),
+      text: widget.product == null
+          ? ''
+          : widget.product!.price.toStringAsFixed(2),
     );
     _descriptionController =
         TextEditingController(text: widget.product?.description ?? '');
@@ -1105,12 +1119,33 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       final picked = await widget.imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 420,
-        maxHeight: 420,
-        imageQuality: 35,
+        maxWidth: 96,
+        maxHeight: 96,
+        imageQuality: 18,
       );
       if (picked == null || !mounted) return;
-      setState(() => _selectedImage = picked);
+      final dataUrl = await ProductImageDataUrl.fromXFile(
+        picked,
+      ).timeout(const Duration(seconds: 4));
+      if (!mounted) return;
+      setState(() {
+        _selectedImage = picked;
+        _selectedImageDataUrl = dataUrl;
+      });
+    } on ProductImageTooLargeException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image is too large. Please choose a smaller photo.'),
+        ),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image took too long to prepare. Try another photo.'),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1141,32 +1176,33 @@ class _ProductDialogState extends State<_ProductDialog> {
     setState(() => _isSaving = true);
 
     try {
-      var finalImageUrl = _imageUrl;
-      if (_selectedImage != null) {
-        finalImageUrl = await ProductImageDataUrl.fromXFile(_selectedImage!);
-      }
+      final finalImageUrl = _selectedImageDataUrl ?? _imageUrl;
 
       if (_isEditing) {
-        await widget.adminApiService.updateProduct(
-          token: widget.accessToken,
-          productId: widget.product!.id,
-          name: name,
-          category: _selectedCategory,
-          price: price,
-          description: _descriptionController.text.trim(),
-          imageUrl: finalImageUrl,
-          isActive: _isActive,
-        ).timeout(const Duration(seconds: 14));
+        await widget.adminApiService
+            .updateProduct(
+              token: widget.accessToken,
+              productId: widget.product!.id,
+              name: name,
+              category: _selectedCategory,
+              price: price,
+              description: _descriptionController.text.trim(),
+              imageUrl: finalImageUrl,
+              isActive: _isActive,
+            )
+            .timeout(const Duration(seconds: 25));
       } else {
-        await widget.adminApiService.createProduct(
-          token: widget.accessToken,
-          name: name,
-          category: _selectedCategory,
-          price: price,
-          description: _descriptionController.text.trim(),
-          imageUrl: finalImageUrl,
-          isActive: _isActive,
-        ).timeout(const Duration(seconds: 14));
+        await widget.adminApiService
+            .createProduct(
+              token: widget.accessToken,
+              name: name,
+              category: _selectedCategory,
+              price: price,
+              description: _descriptionController.text.trim(),
+              imageUrl: finalImageUrl,
+              isActive: _isActive,
+            )
+            .timeout(const Duration(seconds: 25));
       }
 
       if (!mounted) return;
@@ -1186,6 +1222,17 @@ class _ProductDialogState extends State<_ProductDialog> {
         const SnackBar(
           content: Text('Saving took too long. Please try a smaller image.'),
         ),
+      );
+    } on ApiConnectionException {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      context.showHandledError(
+        const ApiConnectionException(
+          message: 'No available backend endpoint.',
+          triedEndpoints: <String>[],
+          details: <String>[],
+        ),
+        fallbackTitle: 'Save failed',
       );
     } catch (error) {
       if (!mounted) return;
@@ -1216,7 +1263,9 @@ class _ProductDialogState extends State<_ProductDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _DialogField(controller: _nameController, label: context.tr('Name', 'الاسم')),
+            _DialogField(
+                controller: _nameController,
+                label: context.tr('Name', 'الاسم')),
             _DialogDropdownField(
               label: context.tr('Category', 'التصنيف'),
               value: _selectedCategory,
@@ -1231,7 +1280,8 @@ class _ProductDialogState extends State<_ProductDialog> {
             _DialogField(
               controller: _priceController,
               label: context.tr('Price', 'السعر'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             _DialogField(
               controller: _descriptionController,
@@ -1248,8 +1298,10 @@ class _ProductDialogState extends State<_ProductDialog> {
                             'الصورة المختارة: ${_selectedImage!.name}',
                           )
                         : _imageUrl?.isNotEmpty == true
-                            ? context.tr('Current image ready', 'الصورة الحالية جاهزة')
-                            : context.tr('No image selected', 'لم يتم اختيار صورة'),
+                            ? context.tr(
+                                'Current image ready', 'الصورة الحالية جاهزة')
+                            : context.tr(
+                                'No image selected', 'لم يتم اختيار صورة'),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF7D859A),
@@ -1266,7 +1318,9 @@ class _ProductDialogState extends State<_ProductDialog> {
             const SizedBox(height: 8),
             SwitchListTile(
               value: _isActive,
-              onChanged: _isSaving ? null : (value) => setState(() => _isActive = value),
+              onChanged: _isSaving
+                  ? null
+                  : (value) => setState(() => _isActive = value),
               contentPadding: EdgeInsets.zero,
               title: Text(context.tr('Visible for customers', 'ظاهر للعملاء')),
             ),
@@ -1288,9 +1342,12 @@ class _ProductDialogState extends State<_ProductDialog> {
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
                 )
-              : Text(_isEditing ? context.tr('Save', 'حفظ') : context.tr('Create', 'إنشاء')),
+              : Text(_isEditing
+                  ? context.tr('Save', 'حفظ')
+                  : context.tr('Create', 'إنشاء')),
         ),
       ],
     );
