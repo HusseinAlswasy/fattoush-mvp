@@ -612,9 +612,9 @@ class _ProductDialogState extends State<_ProductDialog> {
     try {
       final picked = await widget.imagePicker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 700,
-        maxHeight: 700,
-        imageQuality: 75,
+        maxWidth: 360,
+        maxHeight: 360,
+        imageQuality: 45,
       );
       if (picked == null || !mounted) return;
       setState(() {

@@ -1,6 +1,5 @@
 import 'package:customer_app/src/core/network/api_client.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
-import 'package:image/image.dart' as image_tools;
 import 'package:image_picker/image_picker.dart';
 
 class AdminApiService {
@@ -42,7 +41,8 @@ class AdminApiService {
     required String token,
     required XFile image,
   }) async {
-    final imageBytes = await _optimizedProductImageBytes(image);
+    final imageBytes = await image.readAsBytes();
+    _assertSmallEnoughImage(imageBytes);
     final response = await _client.uploadFile(
       '/admin/products/upload-image',
       token: token,
@@ -71,7 +71,8 @@ class AdminApiService {
     required XFile image,
     String? description,
   }) async {
-    final imageBytes = await _optimizedProductImageBytes(image);
+    final imageBytes = await image.readAsBytes();
+    _assertSmallEnoughImage(imageBytes);
     try {
       await _client.uploadFile(
         '/admin/products/with-image',
@@ -119,54 +120,16 @@ class AdminApiService {
     }
   }
 
-  Future<List<int>> _optimizedProductImageBytes(XFile image) async {
-    final originalBytes = await image.readAsBytes();
-    final decoded = image_tools.decodeImage(originalBytes);
-    if (decoded == null) {
-      if (originalBytes.length <= _maxProductImageBytes) {
-        return originalBytes;
-      }
-
-      throw ApiException(
-        path: '/admin/products/upload-image',
-        statusCode: 413,
-        serverMessage:
-            'Image is too large. Please choose a smaller photo or screenshot.',
-      );
+  void _assertSmallEnoughImage(List<int> imageBytes) {
+    if (imageBytes.length <= _maxProductImageBytes) {
+      return;
     }
 
-    final resized = _resizeForProduct(decoded);
-    var quality = 70;
-    var encoded = image_tools.encodeJpg(resized, quality: quality);
-    while (encoded.length > _maxProductImageBytes && quality > 35) {
-      quality -= 10;
-      encoded = image_tools.encodeJpg(resized, quality: quality);
-    }
-
-    if (encoded.length <= _maxProductImageBytes) {
-      return encoded;
-    }
-
-    final tiny = image_tools.copyResize(
-      decoded,
-      width: decoded.width >= decoded.height ? 260 : null,
-      height: decoded.height > decoded.width ? 260 : null,
-      interpolation: image_tools.Interpolation.average,
-    );
-    return image_tools.encodeJpg(tiny, quality: 45);
-  }
-
-  image_tools.Image _resizeForProduct(image_tools.Image source) {
-    const maxSide = 420;
-    if (source.width <= maxSide && source.height <= maxSide) {
-      return source;
-    }
-
-    return image_tools.copyResize(
-      source,
-      width: source.width >= source.height ? maxSide : null,
-      height: source.height > source.width ? maxSide : null,
-      interpolation: image_tools.Interpolation.average,
+    throw ApiException(
+      path: '/admin/products/upload-image',
+      statusCode: 413,
+      serverMessage:
+          'Image is still too large. Please choose a smaller photo or screenshot.',
     );
   }
 
@@ -265,4 +228,4 @@ class AdminApiService {
   }
 }
 
-const int _maxProductImageBytes = 140 * 1024;
+const int _maxProductImageBytes = 250 * 1024;
