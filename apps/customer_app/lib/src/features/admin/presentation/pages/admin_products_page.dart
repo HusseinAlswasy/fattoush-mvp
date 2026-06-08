@@ -668,6 +668,15 @@ class _ProductDialogState extends State<_ProductDialog> {
       return;
     }
 
+    if (_selectedImage != null && _selectedImageDataUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image is not ready yet. Please choose it again.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
