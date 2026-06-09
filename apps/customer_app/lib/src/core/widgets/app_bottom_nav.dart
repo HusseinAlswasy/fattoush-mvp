@@ -1,8 +1,8 @@
 import 'package:customer_app/src/core/layout/app_responsive.dart';
 import 'package:customer_app/src/features/cart/presentation/pages/cart_page.dart';
+import 'package:customer_app/src/features/favorites/presentation/pages/favorites_page.dart';
 import 'package:customer_app/src/features/home/presentation/pages/categories_page.dart';
 import 'package:customer_app/src/features/home/presentation/pages/home_page.dart';
-import 'package:customer_app/src/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:customer_app/src/features/profile/presentation/pages/profile_page.dart';
 import 'package:flutter/material.dart';
 
@@ -10,7 +10,7 @@ enum AppBottomNavTab {
   home,
   restaurants,
   cart,
-  notifications,
+  favorites,
   profile,
 }
 
@@ -71,11 +71,11 @@ class AppBottomNav extends StatelessWidget {
               onTap: () => _navigateTo(context, AppBottomNavTab.cart),
             ),
             _NavItem(
-              icon: Icons.notifications_none_rounded,
-              label: 'Alerts',
+              icon: Icons.favorite_border_rounded,
+              label: 'Favorite',
               compact: compact,
-              selected: currentTab == AppBottomNavTab.notifications,
-              onTap: () => _navigateTo(context, AppBottomNavTab.notifications),
+              selected: currentTab == AppBottomNavTab.favorites,
+              onTap: () => _navigateTo(context, AppBottomNavTab.favorites),
             ),
             _NavItem(
               icon: Icons.person_outline_rounded,
@@ -99,7 +99,7 @@ class AppBottomNav extends StatelessWidget {
       AppBottomNavTab.home => HomePage.routeName,
       AppBottomNavTab.restaurants => CategoriesPage.routeName,
       AppBottomNavTab.cart => CartPage.routeName,
-      AppBottomNavTab.notifications => NotificationsPage.routeName,
+      AppBottomNavTab.favorites => FavoritesPage.routeName,
       AppBottomNavTab.profile => ProfilePage.routeName,
     };
 

@@ -17,6 +17,8 @@ import 'package:customer_app/src/features/checkout/presentation/pages/payment_me
 import 'package:customer_app/src/features/driver/presentation/pages/driver_details_page.dart';
 import 'package:customer_app/src/features/driver/presentation/pages/driver_order_details_page.dart';
 import 'package:customer_app/src/features/driver/presentation/pages/driver_orders_page.dart';
+import 'package:customer_app/src/features/favorites/presentation/controllers/favorites_controller.dart';
+import 'package:customer_app/src/features/favorites/presentation/pages/favorites_page.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:customer_app/src/features/home/presentation/pages/category_products_page.dart';
 import 'package:customer_app/src/features/home/presentation/pages/categories_page.dart';
@@ -32,6 +34,7 @@ class CustomerApp extends StatelessWidget {
   const CustomerApp({super.key});
 
   static final CartController _cartController = CartController();
+  static final FavoritesController _favoritesController = FavoritesController();
   static final AppPreferencesController _preferencesController =
       AppPreferencesController();
   static final AppSessionController _sessionController = AppSessionController();
@@ -40,6 +43,7 @@ class CustomerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppScope(
       cartController: _cartController,
+      favoritesController: _favoritesController,
       preferencesController: _preferencesController,
       sessionController: _sessionController,
       child: ListenableBuilder(
@@ -121,6 +125,11 @@ class CustomerApp extends StatelessWidget {
                 case NotificationsPage.routeName:
                   return MaterialPageRoute<void>(
                     builder: (_) => const NotificationsPage(),
+                    settings: settings,
+                  );
+                case FavoritesPage.routeName:
+                  return MaterialPageRoute<void>(
+                    builder: (_) => const FavoritesPage(),
                     settings: settings,
                   );
                 case CategoryProductsPage.routeName:

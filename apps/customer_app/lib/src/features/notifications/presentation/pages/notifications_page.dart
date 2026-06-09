@@ -63,7 +63,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FD),
         bottomNavigationBar: const AppBottomNav(
-          currentTab: AppBottomNavTab.notifications,
+          currentTab: AppBottomNavTab.home,
         ),
         body: SafeArea(
           child: FutureBuilder<ProductNotificationSummary>(

@@ -144,6 +144,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final cart = AppScope.cartOf(context);
+    final favorites = AppScope.favoritesOf(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
@@ -222,19 +223,26 @@ class _HomePageState extends State<HomePage> {
                   if (visibleProducts.isEmpty)
                     const _ProductNotFound()
                   else
-                    _ProductGrid(
-                      products: visibleProducts,
-                      onOpenProduct: _openProductDetails,
-                      onAddToCart: (product) {
-                        cart.add(product);
-                        context.showAppNotice(
-                          title: 'Added to cart',
-                          message: '${product.name} added successfully.',
-                          type: AppNoticeType.success,
-                          actionLabel: 'Open cart',
-                          onAction: () => Navigator.of(context).pushNamed(
-                            CartPage.routeName,
-                          ),
+                    ListenableBuilder(
+                      listenable: favorites,
+                      builder: (context, _) {
+                        return _ProductGrid(
+                          products: visibleProducts,
+                          onOpenProduct: _openProductDetails,
+                          isFavorite: favorites.isFavorite,
+                          onToggleFavorite: favorites.toggle,
+                          onAddToCart: (product) {
+                            cart.add(product);
+                            context.showAppNotice(
+                              title: 'Added to cart',
+                              message: '${product.name} added successfully.',
+                              type: AppNoticeType.success,
+                              actionLabel: 'Open cart',
+                              onAction: () => Navigator.of(context).pushNamed(
+                                CartPage.routeName,
+                              ),
+                            );
+                          },
                         );
                       },
                     ),
@@ -628,11 +636,15 @@ class _ProductGrid extends StatelessWidget {
   const _ProductGrid({
     required this.products,
     required this.onOpenProduct,
+    required this.isFavorite,
+    required this.onToggleFavorite,
     required this.onAddToCart,
   });
 
   final List<Product> products;
   final ValueChanged<Product> onOpenProduct;
+  final bool Function(Product product) isFavorite;
+  final ValueChanged<Product> onToggleFavorite;
   final ValueChanged<Product> onAddToCart;
 
   @override
@@ -654,7 +666,9 @@ class _ProductGrid extends StatelessWidget {
         final product = products[index];
         return _ProductShowcaseCard(
           product: product,
+          isFavorite: isFavorite(product),
           onTap: () => onOpenProduct(product),
+          onFavoriteTap: () => onToggleFavorite(product),
           onAddToCart: () => onAddToCart(product),
         );
       },
@@ -665,12 +679,16 @@ class _ProductGrid extends StatelessWidget {
 class _ProductShowcaseCard extends StatelessWidget {
   const _ProductShowcaseCard({
     required this.product,
+    required this.isFavorite,
     required this.onTap,
+    required this.onFavoriteTap,
     required this.onAddToCart,
   });
 
   final Product product;
+  final bool isFavorite;
   final VoidCallback onTap;
+  final VoidCallback onFavoriteTap;
   final VoidCallback onAddToCart;
 
   @override
@@ -705,17 +723,25 @@ class _ProductShowcaseCard extends StatelessWidget {
                 Positioned(
                   top: 9,
                   right: 9,
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.favorite_border_rounded,
-                      color: Color(0xFF202944),
-                      size: 21,
+                  child: InkWell(
+                    onTap: onFavoriteTap,
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: isFavorite
+                            ? const Color(0xFFFF5A52)
+                            : const Color(0xFF202944),
+                        size: 21,
+                      ),
                     ),
                   ),
                 ),
