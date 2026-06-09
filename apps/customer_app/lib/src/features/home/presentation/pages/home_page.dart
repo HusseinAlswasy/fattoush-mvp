@@ -10,6 +10,8 @@ import 'package:customer_app/src/features/home/presentation/pages/categories_pag
 import 'package:customer_app/src/features/home/presentation/pages/product_details_page.dart';
 import 'package:customer_app/src/features/home/presentation/pages/search_page.dart';
 import 'package:customer_app/src/features/home/presentation/widgets/error_state_widget.dart';
+import 'package:customer_app/src/features/notifications/data/product_notifications_service.dart';
+import 'package:customer_app/src/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -23,8 +25,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final HomeApiService _homeApiService = HomeApiService();
+  final ProductNotificationsService _notificationsService =
+      ProductNotificationsService();
   final TextEditingController _inlineSearchController = TextEditingController();
   late Future<HomeData> _homeFuture;
+  late Future<int> _unreadNotificationsFuture;
   String? _selectedCategory;
   String _inlineQuery = '';
 
@@ -32,6 +37,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _homeFuture = _homeApiService.fetchHomeData();
+    _unreadNotificationsFuture = _fetchUnreadNotifications();
     _inlineSearchController.addListener(() {
       setState(() {
         _inlineQuery = _inlineSearchController.text.trim();
@@ -48,8 +54,21 @@ class _HomePageState extends State<HomePage> {
   Future<void> _refresh() async {
     setState(() {
       _homeFuture = _homeApiService.fetchHomeData();
+      _unreadNotificationsFuture = _fetchUnreadNotifications();
     });
     await _homeFuture;
+  }
+
+  Future<int> _fetchUnreadNotifications() async {
+    return (await _notificationsService.fetchSummary()).unreadCount;
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.of(context).pushNamed(NotificationsPage.routeName);
+    if (!mounted) return;
+    setState(() {
+      _unreadNotificationsFuture = _fetchUnreadNotifications();
+    });
   }
 
   void _openProductDetails(Product product) {
@@ -163,6 +182,8 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   _CustomerHeader(
                     cartCount: cart.totalItems,
+                    notificationCountFuture: _unreadNotificationsFuture,
+                    onNotificationsTap: _openNotifications,
                     onCartTap: () => Navigator.of(context).pushNamed(
                       CartPage.routeName,
                     ),
@@ -230,10 +251,14 @@ class _HomePageState extends State<HomePage> {
 class _CustomerHeader extends StatelessWidget {
   const _CustomerHeader({
     required this.cartCount,
+    required this.notificationCountFuture,
+    required this.onNotificationsTap,
     required this.onCartTap,
   });
 
   final int cartCount;
+  final Future<int> notificationCountFuture;
+  final VoidCallback onNotificationsTap;
   final VoidCallback onCartTap;
 
   @override
@@ -283,8 +308,8 @@ class _CustomerHeader extends StatelessWidget {
         ),
         _TopActionButton(
           icon: Icons.notifications_none_rounded,
-          badge: 3,
-          onTap: () {},
+          badgeFuture: notificationCountFuture,
+          onTap: onNotificationsTap,
         ),
         const SizedBox(width: 14),
         _TopActionButton(
@@ -299,6 +324,43 @@ class _CustomerHeader extends StatelessWidget {
 
 class _TopActionButton extends StatelessWidget {
   const _TopActionButton({
+    required this.icon,
+    required this.onTap,
+    this.badge = 0,
+    this.badgeFuture,
+  });
+
+  final IconData icon;
+  final int badge;
+  final Future<int>? badgeFuture;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final future = badgeFuture;
+    if (future != null) {
+      return FutureBuilder<int>(
+        future: future,
+        builder: (context, snapshot) {
+          return _TopActionButtonFrame(
+            icon: icon,
+            badge: snapshot.data ?? 0,
+            onTap: onTap,
+          );
+        },
+      );
+    }
+
+    return _TopActionButtonFrame(
+      icon: icon,
+      badge: badge,
+      onTap: onTap,
+    );
+  }
+}
+
+class _TopActionButtonFrame extends StatelessWidget {
+  const _TopActionButtonFrame({
     required this.icon,
     required this.badge,
     required this.onTap,

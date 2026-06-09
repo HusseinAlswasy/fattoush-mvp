@@ -7,6 +7,8 @@ class Product {
     this.category,
     this.description,
     this.imageUrl,
+    this.createdAt,
+    this.updatedAt,
   });
 
   final String id;
@@ -16,6 +18,8 @@ class Product {
   final String? category;
   final String? description;
   final String? imageUrl;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
@@ -25,6 +29,8 @@ class Product {
       category: json['category'] as String?,
       description: json['description'] as String?,
       imageUrl: json['imageUrl'] as String?,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
+      updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? ''),
       price: double.tryParse(json['price'].toString()) ?? 0,
     );
   }
