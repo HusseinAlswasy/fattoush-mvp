@@ -3,6 +3,7 @@ import 'package:customer_app/src/core/widgets/app_notice.dart';
 import 'package:customer_app/src/features/cart/presentation/pages/cart_page.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
 import 'package:customer_app/src/features/home/data/services/home_api_service.dart';
+import 'package:customer_app/src/features/home/presentation/pages/categories_page.dart';
 import 'package:customer_app/src/features/home/presentation/pages/product_details_page.dart';
 import 'package:customer_app/src/features/home/presentation/widgets/product_card.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   Future<List<Product>> _load() async {
     final homeData = await _homeApiService.fetchHomeData();
     return homeData.products
-        .where((product) => (product.category ?? '').trim() == widget.categoryName)
+        .where(
+            (product) => (product.category ?? '').trim() == widget.categoryName)
         .toList(growable: false);
   }
 
@@ -47,6 +49,18 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF4F6FB),
         surfaceTintColor: const Color(0xFFF4F6FB),
+        leading: IconButton(
+          tooltip: 'Back',
+          onPressed: () {
+            final navigator = Navigator.of(context);
+            if (navigator.canPop()) {
+              navigator.pop();
+            } else {
+              navigator.pushReplacementNamed(CategoriesPage.routeName);
+            }
+          },
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
         title: Text(
           widget.categoryName,
           style: const TextStyle(
@@ -56,7 +70,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         ),
         actions: [
           IconButton(
-            onPressed: () => Navigator.of(context).pushNamed(CartPage.routeName),
+            onPressed: () =>
+                Navigator.of(context).pushNamed(CartPage.routeName),
             icon: const Icon(Icons.shopping_bag_outlined),
           ),
         ],
@@ -70,7 +85,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
             }
 
             if (snapshot.hasError) {
-              return const Center(child: Text('Failed to load category products'));
+              return const Center(
+                  child: Text('Failed to load category products'));
             }
 
             final products = snapshot.data ?? const <Product>[];

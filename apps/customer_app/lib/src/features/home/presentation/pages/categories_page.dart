@@ -1,5 +1,6 @@
 import 'package:customer_app/src/features/home/data/services/home_api_service.dart';
 import 'package:customer_app/src/features/home/presentation/pages/category_products_page.dart';
+import 'package:customer_app/src/features/home/presentation/pages/home_page.dart';
 import 'package:flutter/material.dart';
 
 class CategoriesPage extends StatefulWidget {
@@ -52,6 +53,18 @@ class _CategoriesPageState extends State<CategoriesPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF4F6FB),
         surfaceTintColor: const Color(0xFFF4F6FB),
+        leading: IconButton(
+          tooltip: 'Back',
+          onPressed: () {
+            final navigator = Navigator.of(context);
+            if (navigator.canPop()) {
+              navigator.pop();
+            } else {
+              navigator.pushReplacementNamed(HomePage.routeName);
+            }
+          },
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
         title: const Text(
           'All Categories',
           style: TextStyle(
@@ -77,7 +90,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
               final items = snapshot.data ?? <_CategoryListItem>[];
               return ListView.separated(
                 itemCount: items.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return InkWell(
