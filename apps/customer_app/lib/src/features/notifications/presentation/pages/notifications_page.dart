@@ -1,6 +1,7 @@
 import 'package:customer_app/src/core/widgets/app_bottom_nav.dart';
 import 'package:customer_app/src/core/widgets/product_image_view.dart';
 import 'package:customer_app/src/features/home/data/models/product.dart';
+import 'package:customer_app/src/features/home/presentation/pages/home_page.dart';
 import 'package:customer_app/src/features/home/presentation/pages/product_details_page.dart';
 import 'package:customer_app/src/features/notifications/data/product_notifications_service.dart';
 import 'package:flutter/material.dart';
@@ -46,71 +47,83 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
+  void _goHome() {
+    Navigator.of(context).pushReplacementNamed(HomePage.routeName);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
-      bottomNavigationBar: const AppBottomNav(
-        currentTab: AppBottomNavTab.notifications,
-      ),
-      body: SafeArea(
-        child: FutureBuilder<ProductNotificationSummary>(
-          future: _summaryFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFFFF5A52)),
-              );
-            }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _goHome();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FD),
+        bottomNavigationBar: const AppBottomNav(
+          currentTab: AppBottomNavTab.notifications,
+        ),
+        body: SafeArea(
+          child: FutureBuilder<ProductNotificationSummary>(
+            future: _summaryFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFF5A52)),
+                );
+              }
 
-            if (snapshot.hasError) {
-              return _NotificationError(onRetry: _refresh);
-            }
+              if (snapshot.hasError) {
+                return _NotificationError(onRetry: _refresh);
+              }
 
-            final summary = snapshot.data!;
-            final newNotifications = summary.notifications;
-            final history = summary.products.take(8).toList(growable: false);
+              final summary = snapshot.data!;
+              final newNotifications = summary.notifications;
+              final history = summary.products.take(8).toList(growable: false);
 
-            return RefreshIndicator(
-              onRefresh: _refresh,
-              color: const Color(0xFFFF5A52),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-                children: [
-                  const _NotificationsHeader(),
-                  const SizedBox(height: 18),
-                  _SummaryCard(count: newNotifications.length),
-                  const SizedBox(height: 22),
-                  if (newNotifications.isEmpty)
-                    const _EmptyNewNotifications()
-                  else ...[
-                    const _SectionLabel('New products'),
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                color: const Color(0xFFFF5A52),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                  children: [
+                    _NotificationsHeader(onBack: _goHome),
+                    const SizedBox(height: 18),
+                    _SummaryCard(count: newNotifications.length),
+                    const SizedBox(height: 22),
+                    if (newNotifications.isEmpty)
+                      const _EmptyNewNotifications()
+                    else ...[
+                      const _SectionLabel('New products'),
+                      const SizedBox(height: 12),
+                      ...newNotifications.map(
+                        (notification) => _NotificationTile(
+                          product: notification.product,
+                          title: notification.title,
+                          message: notification.message,
+                          isNew: true,
+                          onTap: () => _openProduct(notification.product),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 22),
+                    const _SectionLabel('Latest products'),
                     const SizedBox(height: 12),
-                    ...newNotifications.map(
-                      (notification) => _NotificationTile(
-                        product: notification.product,
-                        title: notification.title,
-                        message: notification.message,
-                        isNew: true,
-                        onTap: () => _openProduct(notification.product),
+                    ...history.map(
+                      (product) => _NotificationTile(
+                        product: product,
+                        title: 'Product in store',
+                        message: '${product.name} is available now.',
+                        onTap: () => _openProduct(product),
                       ),
                     ),
                   ],
-                  const SizedBox(height: 22),
-                  const _SectionLabel('Latest products'),
-                  const SizedBox(height: 12),
-                  ...history.map(
-                    (product) => _NotificationTile(
-                      product: product,
-                      title: 'Product in store',
-                      message: '${product.name} is available now.',
-                      onTap: () => _openProduct(product),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -118,14 +131,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
 }
 
 class _NotificationsHeader extends StatelessWidget {
-  const _NotificationsHeader();
+  const _NotificationsHeader({required this.onBack});
+
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: onBack,
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         const SizedBox(width: 8),
